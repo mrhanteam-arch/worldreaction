@@ -35,34 +35,60 @@ def is_recent(published_at: str, days: int = 3) -> bool:
 
 def infer_category_jp(title: str) -> str:
     t = title.lower()
-    if any(x in t for x in ["経済", "株", "円", "economy", "stock", "finance", "trade", "market", "tariff"]): return "economy"
-    if any(x in t for x in ["政治", "選挙", "首相", "politics", "election", "government", "military", "defense"]): return "news"
-    if any(x in t for x in ["スポーツ", "野球", "サッカー", "sport", "baseball", "soccer", "tennis", "olympic"]): return "sports"
-    if any(x in t for x in ["芸能", "アイドル", "音楽", "kpop", "entertainment", "film", "music", "celebrity"]): return "entertainment"
-    if any(x in t for x in ["技術", "ai", "tech", "technology", "digital", "科学", "science"]): return "tech"
+    if any(x in t for x in ["経済", "株", "円", "economy", "stock", "finance", "trade", "market"]): return "economy"
+    if any(x in t for x in ["政治", "選挙", "首相", "politics", "election", "government", "military"]): return "news"
+    if any(x in t for x in ["スポーツ", "野球", "サッカー", "sport", "baseball", "soccer", "tennis"]): return "sports"
+    if any(x in t for x in ["芸能", "アイドル", "音楽", "kpop", "entertainment", "music"]): return "entertainment"
+    if any(x in t for x in ["技術", "ai", "tech", "technology", "science", "科学"]): return "tech"
     return "news"
 
+def decode_rss(raw: bytes, feed_url: str) -> str:
+    """RSS 인코딩 자동 감지 — NHK는 UTF-8, 일부는 EUC-JP"""
+    # XML 선언에서 인코딩 추출 시도
+    import re
+    head = raw[:200]
+    match = re.search(rb'encoding=["\']([^"\']+)["\']', head)
+    if match:
+        enc = match.group(1).decode("ascii", errors="ignore").lower()
+        try:
+            return raw.decode(enc, errors="replace")
+        except Exception:
+            pass
+    # 폴백: UTF-8 → EUC-JP → Shift-JIS 순서로 시도
+    for enc in ["utf-8", "euc-jp", "shift-jis", "cp932"]:
+        try:
+            return raw.decode(enc, errors="strict")
+        except Exception:
+            continue
+    return raw.decode("utf-8", errors="replace")
+
+# NHK는 영어판만 사용 (인코딩 문제 완전 회피)
 JAPAN_RSS_FEEDS = [
-    {"url": "https://www3.nhk.or.jp/rss/news/cat0.xml", "name": "NHK뉴스",   "lang": "ja"},
-    {"url": "https://www3.nhk.or.jp/rss/news/cat1.xml", "name": "NHK정치",   "lang": "ja"},
-    {"url": "https://www3.nhk.or.jp/rss/news/cat3.xml", "name": "NHK사회",   "lang": "ja"},
-    {"url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml", "name": "Yahoo Japan", "lang": "ja"},
-    {"url": "https://www.japantimes.co.jp/feed/",       "name": "Japan Times","lang": "en"},
+    # NHK World 영어판 (깔끔한 UTF-8)
     {"url": "https://www3.nhk.or.jp/nhkworld/en/news/feeds/", "name": "NHK World", "lang": "en"},
+    # Japan Times 영어판
+    {"url": "https://www.japantimes.co.jp/feed/",             "name": "Japan Times","lang": "en"},
+    # Yahoo Japan (일본어 — 번역 적용)
+    {"url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml", "name": "Yahoo Japan", "lang": "ja"},
+    # Asahi 영어판
+    {"url": "https://www.asahi.com/ajw/rss.feed",             "name": "Asahi English","lang": "en"},
+    # Mainichi 영어판
+    {"url": "https://mainichi.jp/rss/etc/mainichi-flash.rss", "name": "Mainichi",   "lang": "en"},
 ]
 
 async def fetch_japan_rss(session, feed: dict) -> list:
     import aiohttp
     try:
         headers = {
-            "User-Agent": "Mozilla/5.0 WorldReaction/2.0 RSS Reader",
+            "User-Agent": "Mozilla/5.0 WorldReaction/2.0",
             "Accept": "application/rss+xml, application/xml, text/xml, */*"
         }
         async with session.get(feed["url"], headers=headers, timeout=aiohttp.ClientTimeout(total=12)) as r:
             if r.status != 200:
                 log.warning("JP RSS %s status %s", feed["name"], r.status)
                 return []
-            text = await r.text(errors="replace")
+            raw  = await r.read()
+            text = decode_rss(raw, feed["url"])
 
         root  = ET.fromstring(text)
         ns    = {"atom": "http://www.w3.org/2005/Atom"}
@@ -108,7 +134,7 @@ async def fetch_japan_rss(session, feed: dict) -> list:
                 "badges":         [],
                 "category":       infer_category_jp(title),
                 "region":         "JP",
-                "lang":           feed.get("lang", "ja"),
+                "lang":           feed.get("lang", "en"),
             })
         return posts
     except Exception as e:
