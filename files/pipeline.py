@@ -1,4 +1,4 @@
-# pipeline.py — 데이터 파이프라인 (공식 API만 사용)
+# pipeline.py — 미국/일본/중국 균등 피드
 import asyncio
 import logging
 import os
@@ -7,8 +7,8 @@ from datetime import datetime, timezone, timedelta
 
 log = logging.getLogger("wr.pipeline")
 
-CACHE_TTL_FEED   = 600    # 10분
-CACHE_TTL_SEARCH = 3600   # 1시간
+CACHE_TTL_FEED   = 600
+CACHE_TTL_SEARCH = 3600
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -17,15 +17,17 @@ def make_id(source, url):
     return hashlib.md5(f"{source}:{url}".encode()).hexdigest()[:16]
 
 def is_recent(published_at: str, days: int = 7) -> bool:
-    """최근 N일 이내 게시글만 허용"""
     try:
         pub = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
         return (datetime.now(timezone.utc) - pub).days <= days
     except Exception:
         return True
 
+def youtube_published_after(days: int = 7) -> str:
+    dt = datetime.now(timezone.utc) - timedelta(days=days)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
 async def rewrite_and_summarize(title: str, source: str) -> dict:
-    """AI로 제목 재작성 + 요약 생성"""
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         return {"rewrittenTitle": title, "summary": "", "badges": []}
@@ -35,17 +37,14 @@ async def rewrite_and_summarize(title: str, source: str) -> dict:
         resp = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=300,
-            messages=[{
-                "role": "user",
-                "content": f"""다음 해외 게시글 제목을 한국어로 자연스럽게 재작성하고 요약해줘.
+            messages=[{"role": "user", "content": f"""다음 해외 게시글 제목을 한국어로 자연스럽게 재작성하고 요약해줘.
 원문을 그대로 번역하지 말고 한국 독자가 관심 가질 만한 방식으로 재작성해줘.
 
 제목: {title}
 출처: {source}
 
 JSON으로만 답해줘:
-{{"rewrittenTitle": "재작성된 제목", "summary": "2-3줄 요약", "badges": ["hot|praise|controversy|shock|funny|trend 중 해당하는 것들"]}}"""
-            }]
+{{"rewrittenTitle": "재작성된 제목", "summary": "2-3줄 요약", "badges": ["hot|praise|controversy|shock|funny|trend 중 해당하는 것들"]}}"""}]
         )
         import json, re
         text = resp.content[0].text.strip()
@@ -57,123 +56,113 @@ JSON으로만 답해줘:
     return {"rewrittenTitle": title, "summary": "", "badges": []}
 
 
-# ━━━ YouTube ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 실제 화제성 있는 글로벌 이슈 검색어
-YOUTUBE_QUERIES = [
-    "korea trending news 2026",
-    "kpop reaction 2026",
-    "korea international news today",
-    "south korea world reaction",
-    "bts new 2026",
+# ━━━ 저품질 필터 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SKIP_KEYWORDS = [
+    "tiktok reaction", "bollywood", "indian tiktok", "samosa",
+    "daizy aizy", "simpal kharel", "#shorts", "reels #trending",
+    "eating challenge", "food challenge", "biryani", "hindi dubbed",
 ]
 
-# 퍼블리시 날짜 RFC3339 포맷 (7일 이내)
-def youtube_published_after() -> str:
-    dt = datetime.now(timezone.utc) - timedelta(days=7)
-    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+def is_quality(title: str) -> bool:
+    t = title.lower()
+    return not any(kw in t for kw in SKIP_KEYWORDS)
 
-async def fetch_youtube(session, query: str = None, limit: int = 10) -> list:
-    """YouTube Data API v3 — 최근 7일 이내 영상만"""
+def infer_category(title: str) -> str:
+    t = title.lower()
+    if any(x in t for x in ["news", "politics", "breaking", "정치", "뉴스", "election", "war", "conflict"]): return "news"
+    if any(x in t for x in ["kpop", "k-pop", "bts", "blackpink", "aespa", "idol", "concert", "album"]): return "entertainment"
+    if any(x in t for x in ["soccer", "football", "nba", "sports", "son", "baseball", "olympic"]): return "sports"
+    if any(x in t for x in ["tech", "ai", "technology", "samsung", "apple", "nvidia", "반도체"]): return "tech"
+    if any(x in t for x in ["economy", "stock", "market", "trade", "tariff", "gdp", "inflation"]): return "economy"
+    return "entertainment"
+
+
+# ━━━ 미국: YouTube ━━━━━━━━━━━━━━━━━━━━━━━━━
+US_YOUTUBE_QUERIES = [
+    "korea trending world reaction this week",
+    "south korea international news today",
+    "kpop world reaction 2026",
+    "korea politics economy news",
+    "korea US relations news",
+]
+
+async def fetch_youtube_us(session, limit_per_query: int = 6) -> list:
     api_key = os.environ.get("YOUTUBE_API_KEY", "")
     if not api_key:
-        log.warning("YOUTUBE_API_KEY not set")
-        return []
-    try:
-        import aiohttp
-        search_query = query or "korea world trending news"
-        url = (
-            f"https://www.googleapis.com/youtube/v3/search"
-            f"?part=snippet"
-            f"&q={search_query}"
-            f"&type=video"
-            f"&order=viewCount"
-            f"&maxResults={limit}"
-            f"&publishedAfter={youtube_published_after()}"   # 최근 7일
-            f"&relevanceLanguage=ko"
-            f"&key={api_key}"
-        )
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
-            if r.status != 200:
-                log.error("YouTube API error %s: %s", r.status, await r.text())
-                return []
-            data = await r.json(content_type=None)
-
-        posts = []
-        for item in data.get("items", []):
-            snippet  = item.get("snippet", {})
-            video_id = item.get("id", {}).get("videoId", "")
-            if not video_id:
-                continue
-            title = snippet.get("title", "").strip()
-            if not title:
-                continue
-
-            # 저품질 필터 (shorts 태그, 인도 콘텐츠 위주 키워드 제외)
-            skip_keywords = ["#shorts", "tiktok reaction", "bollywood", "indian tiktok",
-                             "samosa", "daizy", "simpal kharel", "reels #trending"]
-            if any(kw.lower() in title.lower() for kw in skip_keywords):
-                continue
-
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-            pub       = snippet.get("publishedAt", now_iso())
-
-            title_lower = title.lower()
-            cat = "entertainment"
-            if any(x in title_lower for x in ["news", "뉴스", "politics", "정치", "breaking"]): cat = "news"
-            elif any(x in title_lower for x in ["kpop", "k-pop", "bts", "blackpink", "aespa", "idol"]): cat = "entertainment"
-            elif any(x in title_lower for x in ["soccer", "football", "sports", "스포츠", "nba", "son"]): cat = "sports"
-            elif any(x in title_lower for x in ["tech", "ai", "technology", "기술", "samsung", "lg"]): cat = "tech"
-            elif any(x in title_lower for x in ["economy", "경제", "stock", "market", "trade"]): cat = "economy"
-
-            posts.append({
-                "id":             make_id("youtube", video_url),
-                "source":         "youtube",
-                "sourceUrl":      video_url,
-                "originalTitle":  title,
-                "rewrittenTitle": title,
-                "summary":        "",
-                "score":          0,
-                "commentCount":   0,
-                "publishedAt":    pub,
-                "badges":         [],
-                "category":       cat,
-                "region":         "GLOBAL",
-                "thumbnail":      snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
-                "channelTitle":   snippet.get("channelTitle", ""),
-            })
-        return posts
-    except Exception as e:
-        log.error("YouTube fetch error: %s", e)
         return []
 
+    import aiohttp
+    all_posts = []
 
-# ━━━ News API ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async def fetch_news(session, query: str = None, limit: int = 20) -> list:
-    """News API — 최근 7일 이내 기사"""
+    for query in US_YOUTUBE_QUERIES:
+        try:
+            url = (
+                f"https://www.googleapis.com/youtube/v3/search"
+                f"?part=snippet&q={query}&type=video&order=viewCount"
+                f"&maxResults={limit_per_query}"
+                f"&publishedAfter={youtube_published_after(7)}"
+                f"&relevanceLanguage=ko&key={api_key}"
+            )
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=12)) as r:
+                if r.status != 200:
+                    continue
+                data = await r.json(content_type=None)
+
+            for item in data.get("items", []):
+                snippet  = item.get("snippet", {})
+                video_id = item.get("id", {}).get("videoId", "")
+                if not video_id:
+                    continue
+                title = snippet.get("title", "").strip()
+                if not title or not is_quality(title):
+                    continue
+
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
+                all_posts.append({
+                    "id":             make_id("youtube", video_url),
+                    "source":         "youtube",
+                    "sourceUrl":      video_url,
+                    "originalTitle":  title,
+                    "rewrittenTitle": title,
+                    "summary":        "",
+                    "score":          0,
+                    "commentCount":   0,
+                    "publishedAt":    snippet.get("publishedAt", now_iso()),
+                    "badges":         [],
+                    "category":       infer_category(title),
+                    "region":         "GLOBAL",
+                    "thumbnail":      snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
+                    "channelTitle":   snippet.get("channelTitle", ""),
+                })
+        except Exception as e:
+            log.error("YouTube query error [%s]: %s", query, e)
+
+    # 중복 제거
+    seen = set()
+    unique = []
+    for p in all_posts:
+        if p["id"] not in seen:
+            seen.add(p["id"])
+            unique.append(p)
+    return unique
+
+
+# ━━━ 미국: News API ━━━━━━━━━━━━━━━━━━━━━━━━
+async def fetch_news_us(session, query: str = None, limit: int = 15) -> list:
     api_key = os.environ.get("NEWS_API_KEY", "")
     if not api_key:
-        log.warning("NEWS_API_KEY not set")
         return []
     try:
         import aiohttp
         from_date = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
-
-        if query:
-            url = (
-                f"https://newsapi.org/v2/everything"
-                f"?q={query}&sortBy=popularity&pageSize={limit}"
-                f"&language=en&from={from_date}&apiKey={api_key}"
-            )
-        else:
-            url = (
-                f"https://newsapi.org/v2/everything"
-                f"?q=korea OR kpop OR samsung OR BTS&sortBy=popularity"
-                f"&pageSize={limit}&language=en&from={from_date}&apiKey={api_key}"
-            )
-
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+        q = query or "korea OR kpop OR samsung OR BTS OR \"south korea\""
+        url = (
+            f"https://newsapi.org/v2/everything"
+            f"?q={q}&sortBy=popularity&pageSize={limit}"
+            f"&language=en&from={from_date}&apiKey={api_key}"
+        )
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=12)) as r:
             if r.status != 200:
-                log.error("News API error %s: %s", r.status, await r.text())
                 return []
             data = await r.json(content_type=None)
 
@@ -183,7 +172,6 @@ async def fetch_news(session, query: str = None, limit: int = 20) -> list:
             source_url = article.get("url", "")
             if not title or not source_url or title == "[Removed]":
                 continue
-            pub = article.get("publishedAt", now_iso())
             posts.append({
                 "id":             make_id("news", source_url),
                 "source":         "news",
@@ -193,9 +181,9 @@ async def fetch_news(session, query: str = None, limit: int = 20) -> list:
                 "summary":        article.get("description", "") or "",
                 "score":          0,
                 "commentCount":   0,
-                "publishedAt":    pub,
+                "publishedAt":    article.get("publishedAt", now_iso()),
                 "badges":         [],
-                "category":       "news",
+                "category":       infer_category(title),
                 "region":         "GLOBAL",
                 "thumbnail":      article.get("urlToImage", "") or "",
                 "channelTitle":   article.get("source", {}).get("name", ""),
@@ -206,7 +194,7 @@ async def fetch_news(session, query: str = None, limit: int = 20) -> list:
         return []
 
 
-# ━━━ Reddit (선택적) ━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━ Reddit ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def fetch_reddit(session, query: str = None, subreddit: str = None, limit: int = 20) -> list:
     try:
         import aiohttp
@@ -218,7 +206,7 @@ async def fetch_reddit(session, query: str = None, subreddit: str = None, limit:
             url = f"https://www.reddit.com/r/worldnews+korea+technology/hot.json?limit={limit}"
 
         headers = {"User-Agent": "WorldReaction/2.0", "Accept": "application/json"}
-        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as r:
+        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=12)) as r:
             if r.status != 200:
                 return []
             data = await r.json(content_type=None)
@@ -234,17 +222,11 @@ async def fetch_reddit(session, query: str = None, subreddit: str = None, limit:
             permalink = "https://www.reddit.com" + d.get("permalink", "")
             ts  = d.get("created_utc", 0)
             pub = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat() if ts else now_iso()
-
-            # 최근 7일 필터
             if not is_recent(pub, days=7):
                 continue
 
             sub = d.get("subreddit", "").lower()
-            cat = "news"
-            if any(x in sub for x in ["kpop", "bangtan", "entertainment"]): cat = "entertainment"
-            elif any(x in sub for x in ["soccer", "sports", "nba", "football"]): cat = "sports"
-            elif any(x in sub for x in ["tech", "technology", "ai", "programming"]): cat = "tech"
-
+            cat = infer_category(title)
             posts.append({
                 "id":             make_id("reddit", permalink),
                 "source":         "reddit",
@@ -258,7 +240,7 @@ async def fetch_reddit(session, query: str = None, subreddit: str = None, limit:
                 "badges":         [],
                 "category":       cat,
                 "region":         "GLOBAL",
-                "subreddit":      f"r/{d.get('subreddit', '')}",
+                "subreddit":      f"r/{sub}",
             })
         return posts
     except Exception as e:
@@ -266,7 +248,41 @@ async def fetch_reddit(session, query: str = None, subreddit: str = None, limit:
         return []
 
 
-# ━━━ 홈 피드 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━ 균등 믹싱 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def mix_balanced(us_posts: list, jp_posts: list, cn_posts: list, limit: int = 50) -> list:
+    """
+    미국/일본/중국 포스트를 균등하게 섞기
+    비율: 미국 50% / 일본 25% / 중국 25%
+    """
+    us_limit = limit // 2           # 25개
+    jp_limit = limit // 4           # 12개
+    cn_limit = limit - us_limit - jp_limit  # 13개
+
+    # 각 region 최신순 정렬
+    us_sorted = sorted(us_posts, key=lambda p: p.get("score", 0) + (1 if is_recent(p.get("publishedAt",""), 1) else 0), reverse=True)
+    jp_sorted = sorted(jp_posts, key=lambda p: p.get("publishedAt", ""), reverse=True)
+    cn_sorted = sorted(cn_posts, key=lambda p: p.get("publishedAt", ""), reverse=True)
+
+    selected_us = us_sorted[:us_limit]
+    selected_jp = jp_sorted[:jp_limit]
+    selected_cn = cn_sorted[:cn_limit]
+
+    # 인터리빙: US 2개 → JP 1개 → CN 1개 순서로 섞기
+    mixed = []
+    us_q = list(selected_us)
+    jp_q = list(selected_jp)
+    cn_q = list(selected_cn)
+
+    while us_q or jp_q or cn_q:
+        for _ in range(2):
+            if us_q: mixed.append(us_q.pop(0))
+        if jp_q: mixed.append(jp_q.pop(0))
+        if cn_q: mixed.append(cn_q.pop(0))
+
+    return mixed[:limit]
+
+
+# ━━━ 홈 피드 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async def get_feed(force_refresh: bool = False, limit: int = 50) -> dict:
     try:
         import cache
@@ -280,17 +296,21 @@ async def get_feed(force_refresh: bool = False, limit: int = 50) -> dict:
     import aiohttp
     connector = aiohttp.TCPConnector(limit=10, ssl=False)
     async with aiohttp.ClientSession(connector=connector) as session:
-        # YouTube 다중 쿼리 + News + Reddit
-        tasks = [
-            fetch_youtube(session, query=q, limit=8) for q in YOUTUBE_QUERIES
-        ] + [
-            fetch_news(session, limit=20),
+        # 미국 소스 수집
+        us_tasks = [
+            fetch_youtube_us(session),
+            fetch_news_us(session),
             fetch_reddit(session, subreddit="worldnews"),
             fetch_reddit(session, subreddit="korea"),
         ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        us_results = await asyncio.gather(*us_tasks, return_exceptions=True)
 
-    # JP / CN 수집
+    us_posts = []
+    for r in us_results:
+        if isinstance(r, list):
+            us_posts.extend(r)
+
+    # 일본 수집
     try:
         from japan_collector import JapanCollector
         jp_posts = await JapanCollector().collect(limit=20)
@@ -298,6 +318,7 @@ async def get_feed(force_refresh: bool = False, limit: int = 50) -> dict:
         log.warning("JP collect error: %s", e)
         jp_posts = []
 
+    # 중국 수집
     try:
         from china_collector import ChinaCollector
         cn_posts = await ChinaCollector().collect(limit=20)
@@ -305,27 +326,21 @@ async def get_feed(force_refresh: bool = False, limit: int = 50) -> dict:
         log.warning("CN collect error: %s", e)
         cn_posts = []
 
-    posts = []
-    for r in results:
-        if isinstance(r, list):
-            posts.extend(r)
-    posts.extend(jp_posts)
-    posts.extend(cn_posts)
+    log.info("수집 현황 — 미국: %d, 일본: %d, 중국: %d", len(us_posts), len(jp_posts), len(cn_posts))
+
+    # 균등 믹싱
+    mixed = mix_balanced(us_posts, jp_posts, cn_posts, limit=limit)
 
     # 중복 제거
     seen = set()
     unique = []
-    for p in posts:
+    for p in mixed:
         if p["id"] not in seen:
             seen.add(p["id"])
             unique.append(p)
 
-    # score 기준 정렬 (RSS는 publishedAt 기준)
-    unique.sort(key=lambda p: (p.get("score", 0), p.get("publishedAt", "")), reverse=True)
-    unique = unique[:limit]
-
-    # AI 재작성 (상위 10개)
-    top = unique[:10]
+    # AI 재작성 (상위 15개)
+    top = unique[:15]
     rewrites = await asyncio.gather(
         *[rewrite_and_summarize(p["originalTitle"], p["source"]) for p in top],
         return_exceptions=True
@@ -336,7 +351,17 @@ async def get_feed(force_refresh: bool = False, limit: int = 50) -> dict:
             post["summary"]        = rewrite.get("summary", "")
             post["badges"]         = rewrite.get("badges", [])
 
-    payload = {"posts": unique, "total": len(unique), "cached": False, "updated_at": now_iso()}
+    payload = {
+        "posts":      unique,
+        "total":      len(unique),
+        "cached":     False,
+        "updated_at": now_iso(),
+        "stats": {
+            "us": len(us_posts),
+            "jp": len(jp_posts),
+            "cn": len(cn_posts),
+        }
+    }
 
     try:
         import cache
@@ -360,19 +385,22 @@ async def search(query: str, force_refresh: bool = False) -> dict:
 
     import aiohttp
     async with aiohttp.ClientSession() as session:
-        tasks = [
-            fetch_youtube(session, query=query, limit=10),
-            fetch_news(session, query=query, limit=15),
-            fetch_reddit(session, query=query, limit=15),
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(
+            fetch_youtube_us(session),
+            fetch_news_us(session, query=query),
+            fetch_reddit(session, query=query),
+            return_exceptions=True
+        )
 
     posts = []
     for r in results:
         if isinstance(r, list):
             posts.extend(r)
 
-    # AI 재작성 (상위 8개)
+    # 검색어 필터
+    q = query.lower()
+    posts = [p for p in posts if q in p.get("originalTitle", "").lower() or q in p.get("summary", "").lower()] or posts
+
     top = posts[:8]
     rewrites = await asyncio.gather(
         *[rewrite_and_summarize(p["originalTitle"], p["source"]) for p in top],
