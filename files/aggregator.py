@@ -32,13 +32,12 @@ async def get_trend_keywords() -> list:
     import aiohttp
 
     # 1순위: 네이버 API
-    naver_id     = os.environ.get("NAVER_CLIENT_ID", "")
-    naver_secret = os.environ.get("NAVER_CLIENT_SECRET", "")
+    naver_id     = os.environ.get("NAVER_CLIENT_ID", "").strip()
+    naver_secret = os.environ.get("NAVER_CLIENT_SECRET", "").strip()
     if naver_id and naver_secret:
         try:
             from naver_collector import NaverCollector
-            async with aiohttp.ClientSession() as session:
-                keywords = await NaverCollector().extract_keywords(session, top_n=10)
+            keywords = await NaverCollector().extract_keywords(top_n=10)
             if keywords:
                 log.info("네이버 트렌드 키워드: %s", keywords[:5])
                 return keywords
