@@ -51,6 +51,140 @@ JSON으로만 답해줘:
     return {"rewrittenTitle": title, "summary": "", "badges": []}
 
 
+async def fetch_youtube(session, query: str = None, limit: int = 20) -> list:
+    """YouTube Data API v3 — 영상 제목/링크/조회수 수집"""
+    api_key = os.environ.get("YOUTUBE_API_KEY", "")
+    if not api_key:
+        log.warning("YOUTUBE_API_KEY not set")
+        return []
+
+    try:
+        import aiohttp
+
+        if query:
+            search_query = query
+        else:
+            search_query = "korea world reaction trending"
+
+        url = (
+            f"https://www.googleapis.com/youtube/v3/search"
+            f"?part=snippet&q={search_query}&type=video"
+            f"&order=viewCount&maxResults={limit}"
+            f"&relevanceLanguage=ko&key={api_key}"
+        )
+
+        headers = {"Accept": "application/json"}
+        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as r:
+            if r.status != 200:
+                text = await r.text()
+                log.error("YouTube API error %s: %s", r.status, text)
+                return []
+            data = await r.json(content_type=None)
+
+        posts = []
+        for item in data.get("items", []):
+            snippet = item.get("snippet", {})
+            video_id = item.get("id", {}).get("videoId", "")
+            if not video_id:
+                continue
+
+            title = snippet.get("title", "").strip()
+            if not title:
+                continue
+
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            pub = snippet.get("publishedAt", now_iso())
+
+            # 카테고리 추론
+            title_lower = title.lower()
+            cat = "entertainment"
+            if any(x in title_lower for x in ["news", "뉴스", "politics", "정치"]): cat = "news"
+            elif any(x in title_lower for x in ["kpop", "k-pop", "bts", "blackpink", "aespa"]): cat = "entertainment"
+            elif any(x in title_lower for x in ["soccer", "football", "sports", "스포츠", "nba"]): cat = "sports"
+            elif any(x in title_lower for x in ["tech", "ai", "technology", "기술"]): cat = "tech"
+
+            posts.append({
+                "id": make_id("youtube", video_url),
+                "source": "youtube",
+                "sourceUrl": video_url,
+                "originalTitle": title,
+                "rewrittenTitle": title,
+                "summary": "",
+                "score": 0,
+                "commentCount": 0,
+                "publishedAt": pub,
+                "badges": [],
+                "category": cat,
+                "thumbnail": snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
+                "channelTitle": snippet.get("channelTitle", ""),
+            })
+        return posts
+    except Exception as e:
+        log.error("YouTube fetch error: %s", e)
+        return []
+
+
+async def fetch_news(session, query: str = None, limit: int = 20) -> list:
+    """News API — 뉴스 기사 수집"""
+    api_key = os.environ.get("NEWS_API_KEY", "")
+    if not api_key:
+        log.warning("NEWS_API_KEY not set")
+        return []
+
+    try:
+        import aiohttp
+
+        if query:
+            url = (
+                f"https://newsapi.org/v2/everything"
+                f"?q={query}&sortBy=popularity&pageSize={limit}"
+                f"&language=en&apiKey={api_key}"
+            )
+        else:
+            url = (
+                f"https://newsapi.org/v2/top-headlines"
+                f"?categories=general&pageSize={limit}"
+                f"&apiKey={api_key}"
+            )
+
+        headers = {"Accept": "application/json"}
+        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as r:
+            if r.status != 200:
+                text = await r.text()
+                log.error("News API error %s: %s", r.status, text)
+                return []
+            data = await r.json(content_type=None)
+
+        posts = []
+        for article in data.get("articles", []):
+            title = article.get("title", "").strip()
+            source_url = article.get("url", "")
+            if not title or not source_url or title == "[Removed]":
+                continue
+
+            pub = article.get("publishedAt", now_iso())
+
+            posts.append({
+                "id": make_id("news", source_url),
+                "source": "news",
+                "sourceUrl": source_url,
+                "originalTitle": title,
+                "rewrittenTitle": title,
+                "summary": article.get("description", ""),
+                "score": 0,
+                "commentCount": 0,
+                "publishedAt": pub,
+                "badges": [],
+                "category": "news",
+                "thumbnail": article.get("urlToImage", ""),
+                "channelTitle": article.get("source", {}).get("name", ""),
+            })
+        return posts
+    except Exception as e:
+        log.error("News fetch error: %s", e)
+        return []
+
+
 async def fetch_reddit(session, query: str = None, subreddit: str = None, limit: int = 20) -> list:
     """Reddit API — 제목/점수/댓글수/링크만 수집"""
     import aiohttp
@@ -77,11 +211,9 @@ async def fetch_reddit(session, query: str = None, subreddit: str = None, limit:
             if not title:
                 continue
             permalink = "https://www.reddit.com" + d.get("permalink", "")
-            from datetime import datetime, timezone
             ts = d.get("created_utc", 0)
             pub = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat() if ts else now_iso()
 
-            # 카테고리 추론
             sub = d.get("subreddit", "").lower()
             cat = "news"
             if any(x in sub for x in ["kpop", "bangtan", "entertainment"]): cat = "entertainment"
@@ -94,7 +226,7 @@ async def fetch_reddit(session, query: str = None, subreddit: str = None, limit:
                 "source": "reddit",
                 "sourceUrl": permalink,
                 "originalTitle": title,
-                "rewrittenTitle": title,  # AI 재작성 전
+                "rewrittenTitle": title,
                 "summary": "",
                 "score": d.get("score", 0),
                 "commentCount": d.get("num_comments", 0),
@@ -110,7 +242,7 @@ async def fetch_reddit(session, query: str = None, subreddit: str = None, limit:
 
 
 async def get_feed(force_refresh: bool = False, limit: int = 30) -> dict:
-    """홈 피드 — Reddit 인기 게시글"""
+    """홈 피드 — YouTube + News + Reddit"""
     try:
         import cache
         if not force_refresh:
@@ -121,14 +253,13 @@ async def get_feed(force_refresh: bool = False, limit: int = 30) -> dict:
         pass
 
     import aiohttp
-    connector = aiohttp.TCPConnector(limit=5, ssl=False)
+    connector = aiohttp.TCPConnector(limit=10, ssl=False)
     async with aiohttp.ClientSession(connector=connector) as session:
-        # 주요 서브레딧에서 인기글 수집
         tasks = [
+            fetch_youtube(session),
+            fetch_news(session),
             fetch_reddit(session, subreddit="worldnews"),
             fetch_reddit(session, subreddit="korea"),
-            fetch_reddit(session, subreddit="technology"),
-            fetch_reddit(session, subreddit="kpop"),
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -137,7 +268,7 @@ async def get_feed(force_refresh: bool = False, limit: int = 30) -> dict:
         if isinstance(r, list):
             posts.extend(r)
 
-    # score 기준 정렬
+    # score 기준 정렬 후 섞기
     posts.sort(key=lambda p: p.get("score", 0), reverse=True)
     posts = posts[:limit]
 
@@ -146,7 +277,7 @@ async def get_feed(force_refresh: bool = False, limit: int = 30) -> dict:
     rewrite_tasks = [rewrite_and_summarize(p["originalTitle"], p["source"]) for p in top_posts]
     rewrites = await asyncio.gather(*rewrite_tasks, return_exceptions=True)
 
-    for i, (post, rewrite) in enumerate(zip(top_posts, rewrites)):
+    for post, rewrite in zip(top_posts, rewrites):
         if isinstance(rewrite, dict):
             post["rewrittenTitle"] = rewrite.get("rewrittenTitle", post["originalTitle"])
             post["summary"] = rewrite.get("summary", "")
@@ -164,7 +295,7 @@ async def get_feed(force_refresh: bool = False, limit: int = 30) -> dict:
 
 
 async def search(query: str, force_refresh: bool = False) -> dict:
-    """검색 — Reddit API"""
+    """검색 — YouTube + News + Reddit"""
     try:
         import cache
         if not force_refresh:
@@ -176,11 +307,24 @@ async def search(query: str, force_refresh: bool = False) -> dict:
 
     import aiohttp
     async with aiohttp.ClientSession() as session:
-        posts = await fetch_reddit(session, query=query, limit=25)
+        tasks = [
+            fetch_youtube(session, query=query, limit=15),
+            fetch_news(session, query=query, limit=15),
+            fetch_reddit(session, query=query, limit=15),
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    posts = []
+    for r in results:
+        if isinstance(r, list):
+            posts.extend(r)
 
     # AI 재작성 (상위 8개)
     top = posts[:8]
-    rewrites = await asyncio.gather(*[rewrite_and_summarize(p["originalTitle"], p["source"]) for p in top], return_exceptions=True)
+    rewrites = await asyncio.gather(
+        *[rewrite_and_summarize(p["originalTitle"], p["source"]) for p in top],
+        return_exceptions=True
+    )
     for post, rewrite in zip(top, rewrites):
         if isinstance(rewrite, dict):
             post["rewrittenTitle"] = rewrite.get("rewrittenTitle", post["originalTitle"])
