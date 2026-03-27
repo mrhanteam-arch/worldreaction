@@ -4,7 +4,6 @@ import logging
 import os
 import hashlib
 from datetime import datetime, timezone, timedelta
-from collections import defaultdict
 
 log = logging.getLogger("wr.aggregator")
 
@@ -24,12 +23,34 @@ def is_recent(published_at: str, days: int = 7) -> bool:
 
 # ━━━ RedditCollector ━━━━━━━━━━━━━━━━━━━━━━━
 class RedditCollector:
-    """키워드 기반 Reddit 검색"""
+    """
+    관련성 높은 서브레딧에서만 수집
+    키워드 검색 대신 서브레딧 직접 타게팅
+    """
 
-    async def search(self, session, keyword: str, limit: int = 10) -> list:
+    # 한국/글로벌 이슈 관련 서브레딧 목록
+    SUBREDDITS = [
+        "worldnews", "korea", "kpop", "bangtan",
+        "technology", "geopolitics", "asia",
+        "southkorea", "kdrama",
+    ]
+
+    # 키워드 → 관련 서브레딧 매핑
+    KEYWORD_SUBREDDIT_MAP = {
+        "kpop":    ["kpop", "bangtan", "kdrama"],
+        "samsung": ["technology", "android", "gadgets"],
+        "bts":     ["bangtan", "kpop"],
+        "korea":   ["korea", "worldnews", "southkorea", "asia"],
+        "손흥민":   ["soccer", "reds", "worldnews"],
+        "트럼프":   ["worldnews", "geopolitics"],
+        "ai":      ["technology", "artificial", "MachineLearning"],
+    }
+
+    async def fetch_subreddit(self, session, subreddit: str, limit: int = 15) -> list:
+        """서브레딧 hot 게시글 수집"""
         import aiohttp
         try:
-            url = f"https://www.reddit.com/search.json?q={keyword}&sort=top&t=week&limit={limit}"
+            url = f"https://www.reddit.com/r/{subreddit}/hot.json?limit={limit}"
             headers = {"User-Agent": "WorldReaction/2.0", "Accept": "application/json"}
             async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=12)) as r:
                 if r.status != 200:
@@ -42,11 +63,13 @@ class RedditCollector:
                 if d.get("stickied") or d.get("over_18"):
                     continue
                 title = d.get("title", "").strip()
-                if not title:
+                if not title or len(title) < 10:
                     continue
+
                 permalink = "https://www.reddit.com" + d.get("permalink", "")
                 ts  = d.get("created_utc", 0)
                 pub = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat() if ts else now_iso()
+
                 if not is_recent(pub, days=7):
                     continue
 
@@ -61,34 +84,62 @@ class RedditCollector:
                     "commentCount":   d.get("num_comments", 0),
                     "publishedAt":    pub,
                     "badges":         [],
-                    "category":       self._infer_category(title, d.get("subreddit", "")),
+                    "category":       self._infer_category(title, subreddit),
                     "region":         "GLOBAL",
-                    "subreddit":      f"r/{d.get('subreddit', '')}",
-                    "keyword":        keyword,
+                    "subreddit":      f"r/{subreddit}",
                 })
             return posts
         except Exception as e:
-            log.error("Reddit search error [%s]: %s", keyword, e)
+            log.error("Reddit subreddit error [%s]: %s", subreddit, e)
             return []
 
     def _infer_category(self, title: str, sub: str) -> str:
         t   = title.lower()
         sub = sub.lower()
-        if any(x in t or x in sub for x in ["kpop", "bangtan", "bts", "entertainment", "idol"]): return "entertainment"
-        if any(x in t or x in sub for x in ["soccer", "sports", "nba", "football", "baseball"]): return "sports"
-        if any(x in t or x in sub for x in ["tech", "technology", "ai", "programming", "samsung"]): return "tech"
-        if any(x in t or x in sub for x in ["economy", "finance", "market", "trade", "stock"]): return "economy"
+        if any(x in sub for x in ["kpop", "bangtan", "kdrama"]): return "entertainment"
+        if any(x in sub for x in ["soccer", "sports", "nba", "baseball"]): return "sports"
+        if any(x in sub for x in ["technology", "android", "gadgets", "machinelearning"]): return "tech"
+        if any(x in t for x in ["economy", "finance", "market", "trade", "stock", "tariff"]): return "economy"
+        if any(x in t for x in ["war", "military", "election", "government", "politics"]): return "news"
         return "news"
+
+    async def collect(self, session, limit_per_sub: int = 10) -> list:
+        tasks   = [self.fetch_subreddit(session, sub, limit_per_sub) for sub in self.SUBREDDITS]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        posts = []
+        for r in results:
+            if isinstance(r, list):
+                posts.extend(r)
+
+        # 중복 제거 후 score 정렬
+        seen, unique = set(), []
+        for p in posts:
+            if p["id"] not in seen:
+                seen.add(p["id"])
+                unique.append(p)
+        unique.sort(key=lambda p: p.get("score", 0), reverse=True)
+        return unique
 
 
 # ━━━ YouTubeCollector ━━━━━━━━━━━━━━━━━━━━━━
 class YouTubeCollector:
-    """키워드 기반 YouTube 검색"""
+    """키워드 기반 YouTube 검색 — 최근 7일 · 저품질 필터"""
 
     SKIP_KEYWORDS = [
         "tiktok reaction", "bollywood", "indian tiktok", "samosa",
-        "daizy aizy", "simpal kharel", "#shorts", "reels #trending",
+        "daizy aizy", "simpal kharel", "reels #trending",
         "eating challenge", "food challenge", "biryani", "hindi dubbed",
+        "shorts #viral", "shorts #trending",
+    ]
+
+    # 한국/글로벌 이슈 검색 쿼리
+    QUERIES = [
+        "south korea world news this week",
+        "kpop reaction 2026",
+        "korea international politics 2026",
+        "korea economy trade 2026",
+        "bts 2026 new",
     ]
 
     def __init__(self):
@@ -104,28 +155,27 @@ class YouTubeCollector:
 
     def _infer_category(self, title: str) -> str:
         t = title.lower()
-        if any(x in t for x in ["news", "politics", "breaking", "election", "war"]): return "news"
-        if any(x in t for x in ["kpop", "k-pop", "bts", "blackpink", "idol", "concert"]): return "entertainment"
-        if any(x in t for x in ["soccer", "football", "nba", "sports", "baseball"]): return "sports"
-        if any(x in t for x in ["tech", "ai", "technology", "samsung", "apple", "nvidia"]): return "tech"
-        if any(x in t for x in ["economy", "stock", "market", "trade", "tariff"]): return "economy"
+        if any(x in t for x in ["news", "politics", "breaking", "election", "war", "tariff"]): return "news"
+        if any(x in t for x in ["kpop", "k-pop", "bts", "blackpink", "idol", "concert", "album"]): return "entertainment"
+        if any(x in t for x in ["soccer", "football", "nba", "sports", "baseball", "olympic"]): return "sports"
+        if any(x in t for x in ["tech", "ai", "technology", "samsung", "apple", "nvidia", "반도체"]): return "tech"
+        if any(x in t for x in ["economy", "stock", "market", "trade", "gdp", "inflation"]): return "economy"
         return "entertainment"
 
-    async def search(self, session, keyword: str, limit: int = 8) -> list:
+    async def search(self, session, query: str, limit: int = 8) -> list:
         import aiohttp
         if not self.api_key:
             return []
         try:
             url = (
                 f"https://www.googleapis.com/youtube/v3/search"
-                f"?part=snippet&q={keyword}&type=video&order=viewCount"
+                f"?part=snippet&q={query}&type=video&order=viewCount"
                 f"&maxResults={limit}"
                 f"&publishedAfter={self._published_after(7)}"
                 f"&relevanceLanguage=ko&key={self.api_key}"
             )
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=12)) as r:
                 if r.status != 200:
-                    log.warning("YouTube API %s: %s", r.status, keyword)
                     return []
                 data = await r.json(content_type=None)
 
@@ -155,24 +205,31 @@ class YouTubeCollector:
                     "region":         "GLOBAL",
                     "thumbnail":      snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
                     "channelTitle":   snippet.get("channelTitle", ""),
-                    "keyword":        keyword,
                 })
             return posts
         except Exception as e:
-            log.error("YouTube search error [%s]: %s", keyword, e)
+            log.error("YouTube search error [%s]: %s", query, e)
             return []
+
+    async def collect(self, session) -> list:
+        tasks   = [self.search(session, q, limit=8) for q in self.QUERIES]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        posts = []
+        for r in results:
+            if isinstance(r, list):
+                posts.extend(r)
+
+        seen, unique = set(), []
+        for p in posts:
+            if p["id"] not in seen:
+                seen.add(p["id"])
+                unique.append(p)
+        return unique
 
 
 # ━━━ Aggregator ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 class Aggregator:
-    """
-    흐름:
-    1. NaverCollector → 트렌드 키워드 추출
-    2. 키워드 → RedditCollector + YouTubeCollector 병렬 검색
-    3. JP/CN RSS 수집
-    4. 전체 병합 · 중복 제거 · 균등 믹싱
-    5. AI 재작성
-    """
 
     def __init__(self):
         self.reddit  = RedditCollector()
@@ -192,8 +249,7 @@ class Aggregator:
 한국 독자가 관심 가질 만한 방식으로 재작성해줘.
 
 제목: {post['originalTitle']}
-출처: {post['source']}
-키워드: {post.get('keyword', '')}
+출처: {post['source']} ({post.get('subreddit', '')})
 
 JSON으로만 답해줘:
 {{"rewrittenTitle": "재작성된 제목", "summary": "2-3줄 요약", "badges": ["hot|praise|controversy|shock|funny|trend 중 해당하는 것들"]}}"""}]
@@ -209,62 +265,54 @@ JSON으로만 답해줘:
             log.warning("AI rewrite error: %s", e)
         return post
 
-    def _deduplicate(self, posts: list) -> list:
-        seen, unique = set(), []
-        for p in posts:
-            if p["id"] not in seen:
-                seen.add(p["id"])
-                unique.append(p)
-        return unique
-
-    def _filter(self, posts: list) -> list:
-        """score/날짜 기준 필터링"""
-        return [p for p in posts if is_recent(p.get("publishedAt", ""), days=7)]
-
     def _mix_balanced(self, global_posts: list, jp_posts: list, cn_posts: list, limit: int = 50) -> list:
-        """미국 50% / 일본 25% / 중국 25% 균등 믹싱"""
+        """글로벌 50% / JP 25% / CN 25% 인터리빙"""
         us_limit = limit // 2
         jp_limit = limit // 4
         cn_limit = limit - us_limit - jp_limit
 
-        us_q = list(sorted(global_posts, key=lambda p: p.get("score", 0), reverse=True))[:us_limit]
-        jp_q = list(sorted(jp_posts,     key=lambda p: p.get("publishedAt", ""), reverse=True))[:jp_limit]
-        cn_q = list(sorted(cn_posts,     key=lambda p: p.get("publishedAt", ""), reverse=True))[:cn_limit]
+        us_q = sorted(global_posts, key=lambda p: p.get("score", 0), reverse=True)[:us_limit]
+        jp_q = sorted(jp_posts,     key=lambda p: p.get("publishedAt", ""), reverse=True)[:jp_limit]
+        cn_q = sorted(cn_posts,     key=lambda p: p.get("publishedAt", ""), reverse=True)[:cn_limit]
 
         mixed = []
         while us_q or jp_q or cn_q:
             for _ in range(2):
                 if us_q: mixed.append(us_q.pop(0))
-            if jp_q: mixed.append(jp_q.pop(0))
-            if cn_q: mixed.append(cn_q.pop(0))
+            if jp_q:  mixed.append(jp_q.pop(0))
+            if cn_q:  mixed.append(cn_q.pop(0))
         return mixed[:limit]
 
     async def run(self, limit: int = 50) -> dict:
         import aiohttp
-        from naver_collector import NaverCollector
 
-        naver = NaverCollector()
+        # Naver 키워드 추출 시도
+        keywords = []
+        try:
+            from naver_collector import NaverCollector
+            connector = aiohttp.TCPConnector(limit=10, ssl=False)
+            async with aiohttp.ClientSession(connector=connector) as session:
+                keywords = await NaverCollector().extract_keywords(session, top_n=8)
+        except Exception as e:
+            log.warning("Naver 스킵: %s", e)
+            keywords = ["korea", "kpop", "bts", "samsung"]
 
-        # ① Naver → 키워드 추출
+        log.info("사용 키워드: %s", keywords)
+
+        # Reddit + YouTube 수집
         connector = aiohttp.TCPConnector(limit=10, ssl=False)
         async with aiohttp.ClientSession(connector=connector) as session:
-            keywords = await naver.extract_keywords(session, top_n=8)
-            log.info("추출된 키워드: %s", keywords)
-
-            # ② 키워드 기반 Reddit + YouTube 병렬 검색
-            search_tasks = []
-            for kw in keywords[:6]:
-                search_tasks.append(self.reddit.search(session, kw, limit=8))
-                search_tasks.append(self.youtube.search(session, kw, limit=6))
-
-            search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+            reddit_task  = self.reddit.collect(session, limit_per_sub=12)
+            youtube_task = self.youtube.collect(session)
+            reddit_posts, youtube_posts = await asyncio.gather(
+                reddit_task, youtube_task, return_exceptions=True
+            )
 
         global_posts = []
-        for r in search_results:
-            if isinstance(r, list):
-                global_posts.extend(r)
+        if isinstance(reddit_posts,  list): global_posts.extend(reddit_posts)
+        if isinstance(youtube_posts, list): global_posts.extend(youtube_posts)
 
-        # ③ JP / CN RSS 수집
+        # JP / CN 수집
         try:
             from japan_collector import JapanCollector
             jp_posts = await JapanCollector().collect(limit=20)
@@ -279,19 +327,22 @@ JSON으로만 답해줘:
             log.warning("CN error: %s", e)
             cn_posts = []
 
-        log.info("수집 현황 — 글로벌: %d, JP: %d, CN: %d", len(global_posts), len(jp_posts), len(cn_posts))
+        log.info("수집 현황 — 글로벌: %d, JP: %d, CN: %d",
+                 len(global_posts), len(jp_posts), len(cn_posts))
 
-        # ④ 필터 + 중복 제거
-        global_posts = self._deduplicate(self._filter(global_posts))
-        jp_posts     = self._deduplicate(jp_posts)
-        cn_posts     = self._deduplicate(cn_posts)
+        # 중복 제거
+        seen, unique_global = set(), []
+        for p in global_posts:
+            if p["id"] not in seen:
+                seen.add(p["id"])
+                unique_global.append(p)
 
-        # ⑤ 균등 믹싱
-        mixed = self._mix_balanced(global_posts, jp_posts, cn_posts, limit=limit)
+        # 균등 믹싱
+        mixed = self._mix_balanced(unique_global, jp_posts, cn_posts, limit=limit)
 
-        # ⑥ AI 재작성 (상위 15개)
-        top      = mixed[:15]
-        rewrites = await asyncio.gather(*[self._rewrite(p) for p in top], return_exceptions=True)
+        # AI 재작성 (상위 15개)
+        top = mixed[:15]
+        await asyncio.gather(*[self._rewrite(p) for p in top], return_exceptions=True)
 
         return {
             "posts":      mixed,
@@ -300,7 +351,7 @@ JSON으로만 답해줘:
             "updated_at": now_iso(),
             "keywords":   keywords,
             "stats": {
-                "global": len(global_posts),
+                "global": len(unique_global),
                 "jp":     len(jp_posts),
                 "cn":     len(cn_posts),
             },
