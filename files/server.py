@@ -1,4 +1,4 @@
-# server.py — WorldReaction v2 API 서버 (JP/CN 스케줄러 + 필터 추가)
+# server.py — WorldReaction v2 API 서버 (랭킹 스케줄러 추가)
 import asyncio
 import logging
 import os
@@ -19,15 +19,15 @@ app.add_middleware(
 )
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 백그라운드 스케줄러 — 앱 시작 시 자동 실행
+# 스케줄러
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-SCHEDULE_INTERVAL_MAIN = 600   # 기존 피드: 10분마다
-SCHEDULE_INTERVAL_JP   = 900   # 일본 피드: 15분마다
-SCHEDULE_INTERVAL_CN   = 900   # 중국 피드: 15분마다
+SCHEDULE_INTERVAL_MAIN    = 600   # 메인 피드:  10분
+SCHEDULE_INTERVAL_JP      = 900   # JP 피드:    15분
+SCHEDULE_INTERVAL_CN      = 900   # CN 피드:    15분
+SCHEDULE_INTERVAL_RANKING = 900   # 랭킹:       15분
 
 async def scheduler_main():
-    """기존 파이프라인 주기 수집"""
     while True:
         try:
             import pipeline
@@ -39,7 +39,6 @@ async def scheduler_main():
         await asyncio.sleep(SCHEDULE_INTERVAL_MAIN)
 
 async def scheduler_jp():
-    """일본 피드 주기 수집"""
     while True:
         try:
             from japan_collector import JapanCollector
@@ -53,7 +52,6 @@ async def scheduler_jp():
         await asyncio.sleep(SCHEDULE_INTERVAL_JP)
 
 async def scheduler_cn():
-    """중국 피드 주기 수집"""
     while True:
         try:
             from china_collector import ChinaCollector
@@ -66,17 +64,29 @@ async def scheduler_cn():
             log.error("[스케줄러] CN 오류: %s", e)
         await asyncio.sleep(SCHEDULE_INTERVAL_CN)
 
+async def scheduler_ranking():
+    """15분마다 전체 피드 기반으로 랭킹 재계산"""
+    while True:
+        try:
+            import ranking
+            log.info("[스케줄러] 랭킹 계산 시작")
+            result = await ranking.get_ranking(force_refresh=True)
+            log.info("[스케줄러] 랭킹 완료: %d개 키워드", result.get("total", 0))
+        except Exception as e:
+            log.error("[스케줄러] 랭킹 오류: %s", e)
+        await asyncio.sleep(SCHEDULE_INTERVAL_RANKING)
+
 @app.on_event("startup")
 async def startup_event():
-    """서버 시작 시 스케줄러 3개 백그라운드 실행"""
     asyncio.create_task(scheduler_main())
     asyncio.create_task(scheduler_jp())
     asyncio.create_task(scheduler_cn())
-    log.info("스케줄러 3개 시작 완료 (메인/JP/CN)")
+    asyncio.create_task(scheduler_ranking())
+    log.info("스케줄러 4개 시작 완료 (메인/JP/CN/랭킹)")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 기존 엔드포인트 (변경 없음)
+# 엔드포인트
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @app.get("/")
@@ -88,21 +98,14 @@ async def health():
     return {"status": "healthy"}
 
 @app.get("/feed")
-async def feed(
-    refresh: bool = False,
-    limit: int = 30,
-    region: str = None,   # ← 필터 추가 (JP / CN / 없으면 전체)
-):
+async def feed(refresh: bool = False, limit: int = 30, region: str = None):
     try:
-        # region 필터 있을 때
         if region:
             region = region.upper()
             import cache
             cached = await cache.get(f"feed:{region.lower()}")
             if cached and not refresh:
                 return JSONResponse(content={**cached, "cached": True})
-
-            # 캐시 없으면 실시간 수집
             if region == "JP":
                 from japan_collector import JapanCollector
                 posts = await JapanCollector().collect(limit=limit)
@@ -111,71 +114,49 @@ async def feed(
                 posts = await ChinaCollector().collect(limit=limit)
             else:
                 return JSONResponse(content={"posts": [], "total": 0, "error": "region은 JP 또는 CN"})
-
             result = {"posts": posts, "total": len(posts), "region": region, "cached": False}
             await cache.set(f"feed:{region.lower()}", result, SCHEDULE_INTERVAL_JP)
             return JSONResponse(content=result)
 
-        # region 없으면 기존 전체 피드 (JP/CN 포함)
         import pipeline
         result = await pipeline.get_feed(force_refresh=refresh, limit=limit)
         return JSONResponse(content=result)
-
     except Exception as e:
         log.error("feed error: %s", e)
         return JSONResponse(content={"posts": [], "total": 0, "error": str(e)})
-
 
 @app.get("/search")
 async def search(q: str = Query(...), refresh: bool = False, region: str = None):
     try:
         import pipeline
         result = await pipeline.search(query=q, force_refresh=refresh)
-
-        # region 필터 적용
         if region:
             region = region.upper()
             result["posts"] = [p for p in result["posts"] if p.get("region") == region]
             result["total"] = len(result["posts"])
-
         return JSONResponse(content=result)
     except Exception as e:
         log.error("search error: %s", e)
         return JSONResponse(content={"query": q, "posts": [], "total": 0, "error": str(e)})
 
-
 @app.get("/trending")
-async def trending():
+async def trending(refresh: bool = False):
+    """
+    전세계 반응 핫 토픽 랭킹
+    - 수집된 게시글 score 합산 기반
+    - JP 🇯🇵 / CN 🇨🇳 / 글로벌 🌐 반응 표시
+    - 15분마다 자동 업데이트
+    """
     try:
-        import cache
-        cached = await cache.get("trending:keywords")
-        if cached:
-            return cached
-    except Exception:
-        pass
-    return {
-        "keywords": [
-            {"rank": 1,  "word": "BTS",       "count": "2.4만", "badge": "hot"},
-            {"rank": 2,  "word": "트럼프 관세", "count": "1.8만", "badge": "hot"},
-            {"rank": 3,  "word": "삼성 AI",    "count": "1.2만", "badge": "up"},
-            {"rank": 4,  "word": "손흥민",     "count": "9.8천", "badge": ""},
-            {"rank": 5,  "word": "일본 지진",  "count": "8.1천", "badge": "new"},
-            {"rank": 6,  "word": "넷플릭스",   "count": "6.3천", "badge": ""},
-            {"rank": 7,  "word": "AI 반도체",  "count": "5.1천", "badge": "up"},
-            {"rank": 8,  "word": "갤럭시 S25", "count": "4.2천", "badge": ""},
-            {"rank": 9,  "word": "엔비디아",   "count": "3.8천", "badge": "new"},
-            {"rank": 10, "word": "테슬라",     "count": "2.9천", "badge": ""},
-        ]
-    }
-
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 신규: region 전용 엔드포인트
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        import ranking
+        result = await ranking.get_ranking(force_refresh=refresh)
+        return JSONResponse(content=result)
+    except Exception as e:
+        log.error("trending error: %s", e)
+        return JSONResponse(content={"keywords": [], "total": 0, "error": str(e)})
 
 @app.get("/region/{region}")
 async def region_feed(region: str, limit: int = 30, refresh: bool = False):
-    """/region/JP 또는 /region/CN 전용 피드"""
     region = region.upper()
     try:
         import cache
@@ -183,7 +164,6 @@ async def region_feed(region: str, limit: int = 30, refresh: bool = False):
             cached = await cache.get(f"feed:{region.lower()}")
             if cached:
                 return JSONResponse(content={**cached, "cached": True})
-
         if region == "JP":
             from japan_collector import JapanCollector
             posts = await JapanCollector().collect(limit=limit)
@@ -192,11 +172,9 @@ async def region_feed(region: str, limit: int = 30, refresh: bool = False):
             posts = await ChinaCollector().collect(limit=limit)
         else:
             return JSONResponse(status_code=400, content={"error": "region은 JP 또는 CN"})
-
         result = {"posts": posts, "total": len(posts), "region": region, "cached": False}
         await cache.set(f"feed:{region.lower()}", result, SCHEDULE_INTERVAL_JP)
         return JSONResponse(content=result)
-
     except Exception as e:
         log.error("region feed error [%s]: %s", region, e)
         return JSONResponse(content={"posts": [], "total": 0, "error": str(e)})
