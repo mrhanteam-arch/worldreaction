@@ -1,4 +1,4 @@
-# aggregator.py — 소스 균등 믹싱 + 검색 개선
+# aggregator.py — 네이버 우선 키워드 + 소스 균등 믹싱 + 검색 개선
 import asyncio
 import logging
 import os
@@ -21,27 +21,40 @@ def is_recent(published_at: str, days: int = 7) -> bool:
         return True
 
 
-# ━━━ 트렌드 키워드 (네이버 없이 자체 생성) ━━━━━━━━
+# ━━━ 트렌드 키워드 수집 ━━━━━━━━━━━━━━━━━━━━━━━
 async def get_trend_keywords() -> list:
     """
-    네이버 API 없이 트렌드 키워드 생성
-    1. Google Trends RSS (무료, 키 불필요)
-    2. 실패 시 기본 키워드 사용
+    우선순위:
+    1. 네이버 뉴스 API (NAVER_CLIENT_ID 있을 때)
+    2. Google Trends 한국 RSS (키 불필요)
+    3. 기본 폴백 키워드
     """
     import aiohttp
 
-    # Google Trends 한국 RSS (공식 공개 피드)
-    google_trends_url = "https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR"
+    # 1순위: 네이버 API
+    naver_id     = os.environ.get("NAVER_CLIENT_ID", "")
+    naver_secret = os.environ.get("NAVER_CLIENT_SECRET", "")
+    if naver_id and naver_secret:
+        try:
+            from naver_collector import NaverCollector
+            async with aiohttp.ClientSession() as session:
+                keywords = await NaverCollector().extract_keywords(session, top_n=10)
+            if keywords:
+                log.info("네이버 트렌드 키워드: %s", keywords[:5])
+                return keywords
+        except Exception as e:
+            log.warning("네이버 키워드 실패: %s", e)
 
+    # 2순위: Google Trends 한국 RSS
     try:
+        import xml.etree.ElementTree as ET
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                google_trends_url,
+                "https://trends.google.com/trends/trendingsearches/daily/rss?geo=KR",
                 headers={"User-Agent": "Mozilla/5.0 WorldReaction/2.0"},
                 timeout=aiohttp.ClientTimeout(total=10)
             ) as r:
                 if r.status == 200:
-                    import xml.etree.ElementTree as ET
                     text = await r.text(errors="replace")
                     root = ET.fromstring(text)
                     keywords = []
@@ -55,7 +68,8 @@ async def get_trend_keywords() -> list:
     except Exception as e:
         log.warning("Google Trends 실패: %s", e)
 
-    # 폴백: 고정 키워드
+    # 3순위: 기본 폴백
+    log.info("기본 키워드 사용")
     return [
         "korea news", "kpop", "bts", "blackpink", "samsung",
         "south korea politics", "korea economy", "손흥민",
@@ -65,7 +79,6 @@ async def get_trend_keywords() -> list:
 
 # ━━━ RedditCollector ━━━━━━━━━━━━━━━━━━━━━━━
 class RedditCollector:
-    # 서브레딧 + 키워드 검색 혼합
     SUBREDDITS = [
         "worldnews", "korea", "kpop", "bangtan",
         "technology", "geopolitics", "asia", "southkorea",
@@ -115,7 +128,6 @@ class RedditCollector:
             return []
 
     async def search_keyword(self, session, keyword: str, limit: int = 8) -> list:
-        """키워드 기반 Reddit 검색 (트렌드 키워드 활용)"""
         import aiohttp
         try:
             url     = f"https://www.reddit.com/search.json?q={keyword}&sort=top&t=week&limit={limit}"
@@ -174,14 +186,11 @@ class RedditCollector:
         import aiohttp
         connector = aiohttp.TCPConnector(limit=8, ssl=False)
         async with aiohttp.ClientSession(connector=connector) as session:
-            # 서브레딧 수집
             sub_tasks = [self.fetch_subreddit(session, sub, 12) for sub in self.SUBREDDITS]
-            # 키워드 검색 (트렌드 키워드 상위 4개)
-            kw_tasks = []
+            kw_tasks  = []
             if keywords:
                 for kw in keywords[:4]:
                     kw_tasks.append(self.search_keyword(session, kw, 6))
-
             results = await asyncio.gather(*(sub_tasks + kw_tasks), return_exceptions=True)
 
         posts = []
@@ -283,7 +292,6 @@ class YouTubeCollector:
 
     async def collect(self, keywords: list = None) -> list:
         import aiohttp
-        # 기본 쿼리 + 트렌드 키워드 상위 3개
         queries = list(self.BASE_QUERIES)
         if keywords:
             for kw in keywords[:3]:
@@ -345,25 +353,20 @@ JSON으로만 답해줘:
         return post
 
     def _interleave(self, reddit: list, youtube: list, jp: list, cn: list, limit: int = 50) -> list:
-        """
-        매체별 인터리빙 믹싱
-        순서: Reddit → YouTube → JP → CN → Reddit → YouTube → ...
-        """
-        queues = {
-            "reddit":  list(reddit),
-            "youtube": list(youtube),
-            "jp":      list(jp),
-            "cn":      list(cn),
-        }
-        # 각 소스 최대 할당량
+        """Reddit → YouTube → JP → CN 순서로 인터리빙"""
         caps = {
             "reddit":  limit // 3,
             "youtube": limit // 4,
             "jp":      limit // 6,
             "cn":      limit // 6,
         }
+        queues = {
+            "reddit":  list(reddit[:caps["reddit"]*2]),
+            "youtube": list(youtube[:caps["youtube"]*2]),
+            "jp":      list(jp),
+            "cn":      list(cn),
+        }
         counts = {k: 0 for k in queues}
-
         order  = ["reddit", "youtube", "jp", "cn"]
         mixed  = []
         seen   = set()
@@ -383,26 +386,24 @@ JSON으로만 답해줘:
                         break
             if not added:
                 break
-
         return mixed
 
     async def run(self, limit: int = 50) -> dict:
-        # 트렌드 키워드 수집 (Google Trends 또는 폴백)
+        # 트렌드 키워드 (네이버 우선)
         keywords = await get_trend_keywords()
         log.info("트렌드 키워드: %s", keywords[:5])
 
-        # Reddit + YouTube 독립 수집 (키워드 전달)
-        reddit_task  = self.reddit.collect(keywords=keywords)
-        youtube_task = self.youtube.collect(keywords=keywords)
-
+        # Reddit + YouTube 독립 수집
         reddit_posts, youtube_posts = await asyncio.gather(
-            reddit_task, youtube_task, return_exceptions=True
+            self.reddit.collect(keywords=keywords),
+            self.youtube.collect(keywords=keywords),
+            return_exceptions=True
         )
 
         reddit_posts  = reddit_posts  if isinstance(reddit_posts,  list) else []
         youtube_posts = youtube_posts if isinstance(youtube_posts, list) else []
 
-        # JP / CN 수집
+        # JP / CN
         try:
             from japan_collector import JapanCollector
             jp_posts = await JapanCollector().collect(limit=20)
@@ -420,7 +421,7 @@ JSON으로만 답해줘:
         log.info("수집 현황 — Reddit: %d, YouTube: %d, JP: %d, CN: %d",
                  len(reddit_posts), len(youtube_posts), len(jp_posts), len(cn_posts))
 
-        # 매체별 인터리빙
+        # 인터리빙 믹싱
         mixed = self._interleave(reddit_posts, youtube_posts, jp_posts, cn_posts, limit=limit)
 
         # AI 재작성 (상위 15개)
@@ -442,26 +443,33 @@ JSON으로만 답해줘:
         }
 
     async def search(self, query: str) -> dict:
-        """
-        검색: Reddit + YouTube 동시에 쿼리
-        BTS 검색 시 → bangtan, kpop, worldnews 등 다양한 소스에서 수집
-        """
+        """BTS 검색 시 bangtan/kpop 서브레딧 + YouTube 다양하게"""
         import aiohttp
+        q_lower = query.lower()
+
+        # 관련 서브레딧 자동 선택
+        extra_subs = []
+        if any(x in q_lower for x in ["bts", "방탄"]):
+            extra_subs = ["bangtan", "kpop"]
+        elif any(x in q_lower for x in ["kpop", "케이팝"]):
+            extra_subs = ["kpop", "kdrama"]
+        elif any(x in q_lower for x in ["soccer", "football", "손흥민"]):
+            extra_subs = ["soccer", "reds"]
+        elif any(x in q_lower for x in ["tech", "ai", "samsung"]):
+            extra_subs = ["technology", "android"]
 
         connector = aiohttp.TCPConnector(limit=8, ssl=False)
         async with aiohttp.ClientSession(connector=connector) as session:
             tasks = [
-                # Reddit: 키워드 검색
                 self.reddit.search_keyword(session, query, limit=10),
-                # Reddit: 관련 서브레딧 직접 수집
-                self.reddit.fetch_subreddit(session, "kpop",     8) if any(x in query.lower() for x in ["bts", "kpop", "blackpink", "k-pop"]) else asyncio.sleep(0),
-                self.reddit.fetch_subreddit(session, "bangtan",  8) if any(x in query.lower() for x in ["bts", "방탄"])                        else asyncio.sleep(0),
-                self.reddit.fetch_subreddit(session, "worldnews",8),
-                # YouTube: 쿼리 검색
                 self.youtube.search_one(session, query, limit=8),
                 self.youtube.search_one(session, f"{query} korea reaction", limit=6),
                 self.youtube.search_one(session, f"{query} 2026", limit=6),
+                self.reddit.fetch_subreddit(session, "worldnews", 8),
             ]
+            for sub in extra_subs:
+                tasks.append(self.reddit.fetch_subreddit(session, sub, 8))
+
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
         posts = []
@@ -469,31 +477,27 @@ JSON으로만 답해줘:
             if isinstance(r, list):
                 posts.extend(r)
 
-        # JP/CN에서도 검색
+        # JP/CN에서도 관련 게시글 추가
         try:
             from japan_collector import JapanCollector
             jp = await JapanCollector().collect(limit=10)
-            q  = query.lower()
-            posts.extend([p for p in jp if q in p.get("originalTitle", "").lower()])
+            posts.extend([p for p in jp if q_lower in p.get("originalTitle", "").lower()])
         except Exception:
             pass
 
         try:
             from china_collector import ChinaCollector
             cn = await ChinaCollector().collect(limit=10)
-            q  = query.lower()
-            posts.extend([p for p in cn if q in p.get("originalTitle", "").lower()])
+            posts.extend([p for p in cn if q_lower in p.get("originalTitle", "").lower()])
         except Exception:
             pass
 
-        # 중복 제거
+        # 중복 제거 + score 정렬
         seen, unique = set(), []
         for p in posts:
             if p["id"] not in seen:
                 seen.add(p["id"])
                 unique.append(p)
-
-        # score 기준 정렬
         unique.sort(key=lambda p: p.get("score", 0), reverse=True)
 
         # AI 재작성 (상위 8개)
