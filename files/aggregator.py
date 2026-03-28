@@ -323,24 +323,43 @@ class Aggregator:
         self.youtube = YouTubeCollector()
 
     async def _rewrite(self, post: dict) -> dict:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        """SDK 없이 aiohttp로 직접 Anthropic API 호출 — proxies 오류 완전 우회"""
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
         if not api_key:
             return post
         try:
-            import anthropic, json, re
-            client = anthropic.Anthropic(api_key=api_key)
-            resp   = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=300,
-                messages=[{"role": "user", "content": f"""다음 해외 게시글 제목을 한국어로 자연스럽게 재작성하고 요약해줘.
-
-제목: {post['originalTitle']}
-출처: {post['source']} {post.get('subreddit', '')}
-
-JSON으로만 답해줘:
-{{"rewrittenTitle": "재작성된 제목", "summary": "2-3줄 요약", "badges": ["hot|praise|controversy|shock|funny|trend 중 해당하는 것들"]}}"""}]
+            import aiohttp, json, re
+            prompt = (
+                "다음 해외 게시글 제목을 한국어로 자연스럽게 재작성하고 요약해줘.\n\n"
+                f"제목: {post['originalTitle']}\n"
+                f"출처: {post['source']} {post.get('subreddit', '')}\n\n"
+                "JSON으로만 답해줘:\n"
+                '{"rewrittenTitle": "재작성된 제목", "summary": "2-3줄 요약", '
+                '"badges": ["hot|praise|controversy|shock|funny|trend 중 해당하는 것들"]}'
             )
-            text  = resp.content[0].text.strip()
+            headers = {
+                "x-api-key":         api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type":      "application/json",
+            }
+            payload = {
+                "model":      "claude-haiku-4-5-20251001",
+                "max_tokens": 300,
+                "messages":   [{"role": "user", "content": prompt}],
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers=headers,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=15)
+                ) as r:
+                    if r.status != 200:
+                        log.warning("Anthropic API %s", r.status)
+                        return post
+                    data = await r.json(content_type=None)
+
+            text  = data.get("content", [{}])[0].get("text", "").strip()
             match = re.search(r'\{.*\}', text, re.DOTALL)
             if match:
                 result = json.loads(match.group())
