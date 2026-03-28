@@ -1,0 +1,8 @@
+{
+  "build": {
+    "builder": "nixpacks"
+  },
+  "deploy": {
+    "startCommand": "pip install anthropic==0.49.0 && uvicorn server:app --host 0.0.0.0 --port $PORT"
+  }
+}
