@@ -32,6 +32,7 @@ def infer_category(title: str) -> str:
     return "news"
 
 STOPWORDS = {
+    "quot", "amp", "lt", "gt", "apos",  # HTML 엔티티 잔여물
     "의", "이", "가", "을", "를", "은", "는", "에", "서", "와", "과",
     "로", "으로", "도", "만", "한", "하다", "있다", "등", "및", "위해",
     "the", "a", "an", "is", "in", "of", "to", "and", "for", "with",
@@ -89,6 +90,9 @@ class NaverCollector:
             posts = []
             for item in data.get("items", []):
                 title = re.sub(r"<[^>]+>", "", item.get("title", "")).strip()
+                # HTML 엔티티 변환 (&quot; &amp; &lt; &gt; 등)
+                import html
+                title = html.unescape(title)
                 link  = item.get("originallink") or item.get("link", "")
                 pub   = parse_naver_date(item.get("pubDate", ""))
                 if not title or not link:
@@ -131,12 +135,32 @@ class NaverCollector:
 
         word_counts = Counter()
         for title in all_titles:
+            # HTML 엔티티 재처리
+            import html as html_mod
+            title = html_mod.unescape(title)
             words = re.findall(r"[가-힣a-zA-Z]{2,}", title)
             for w in words:
-                if w.lower() not in STOPWORDS and len(w) >= 2:
-                    word_counts[w] += 1
+                wl = w.lower()
+                # 불용어 제거 + 동사형 어미 제거 (했다, 됩니다 등)
+                if wl in STOPWORDS:
+                    continue
+                if len(w) < 2:
+                    continue
+                # 영어는 3글자 이상만 (단순 두글자 영어 제외)
+                if re.match(r"^[a-zA-Z]+$", w) and len(w) < 3:
+                    continue
+                word_counts[w] += 1
 
-        keywords = [w for w, _ in word_counts.most_common(top_n)]
+        # 상위 키워드 중 Reddit/YouTube 검색에 적합한 것만 선택
+        # 한국어 키워드는 영어로 변환하여 검색에 활용
+        top_words = [w for w, _ in word_counts.most_common(top_n * 2)]
+
+        # 영어 키워드 우선, 한국어는 주요 고유명사만
+        en_keywords = [w for w in top_words if re.match(r"^[a-zA-Z]", w)]
+        ko_keywords = [w for w in top_words if re.match(r"^[가-힣]", w)]
+
+        # 영어 + 한국어 혼합 (영어 먼저)
+        keywords = (en_keywords + ko_keywords)[:top_n]
         log.info("Naver 키워드 추출 성공: %s", keywords[:5])
         return keywords
 
