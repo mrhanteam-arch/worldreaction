@@ -109,7 +109,7 @@ class NaverCollector:
                     "publishedAt":    pub,
                     "badges":         [],
                     "category":       infer_category(title),
-                    "region":         "GLOBAL",
+                    "region":         "KR",
                     "keyword":        query,
                 })
             log.info("Naver [%s]: %d건", query, len(posts))
