@@ -1,13 +1,12 @@
 # cache.py — Upstash REST API
 import os, json, logging
 import urllib.request, urllib.parse
-
 log = logging.getLogger("wr.cache")
 TTL_DEFAULT = 600
 
 def _cfg():
-    url = os.environ.get("UPSTASH_REDIS_REST_URL", "")
-    token = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+    url   = os.environ.get("UPSTASH_REDIS_REST_URL", "").strip()
+    token = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "").strip()  # \n 제거
     if url and not url.startswith("http"):
         url = "https://" + url
     return url, token
