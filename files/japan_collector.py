@@ -64,16 +64,16 @@ def decode_rss(raw: bytes, feed_url: str) -> str:
 
 # NHK는 영어판만 사용 (인코딩 문제 완전 회피)
 JAPAN_RSS_FEEDS = [
-    # NHK World 영어판 (깔끔한 UTF-8)
-    {"url": "https://www3.nhk.or.jp/nhkworld/en/news/feeds/", "name": "NHK World", "lang": "en"},
-    # Japan Times 영어판
-    {"url": "https://www.japantimes.co.jp/feed/",             "name": "Japan Times","lang": "en"},
-    # Yahoo Japan (일본어 — 번역 적용)
-    {"url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml", "name": "Yahoo Japan", "lang": "ja"},
-    # Asahi 영어판
-    {"url": "https://www.asahi.com/ajw/rss.feed",             "name": "Asahi English","lang": "en"},
-    # Mainichi 영어판
-    {"url": "https://mainichi.jp/rss/etc/mainichi-flash.rss", "name": "Mainichi",   "lang": "en"},
+    # Japan Times 영어판 (안정적)
+    {"url": "https://www.japantimes.co.jp/feed/",                "name": "Japan Times", "lang": "en"},
+    # Yahoo Japan (일본어)
+    {"url": "https://news.yahoo.co.jp/rss/topics/top-picks.xml",  "name": "Yahoo Japan", "lang": "ja"},
+    # NHK World 영어 (URL 수정)
+    {"url": "https://www3.nhk.or.jp/nhkworld/en/news/feeds/",     "name": "NHK World",   "lang": "en"},
+    # The Japan News (Yomiuri 영어판)
+    {"url": "https://the-japan-news.com/feed",                    "name": "Japan News",  "lang": "en"},
+    # Kyodo News 영어판
+    {"url": "https://english.kyodonews.net/rss/news.xml",         "name": "Kyodo News",  "lang": "en"},
 ]
 
 async def fetch_japan_rss(session, feed: dict) -> list:
@@ -153,23 +153,39 @@ async def translate_jp_titles(posts: list) -> list:
         return posts
 
     try:
-        import anthropic, json, re
-        client = anthropic.Anthropic(api_key=api_key)
+        import aiohttp, json, re
         batch  = ja_posts[:10]
         titles = [p["originalTitle"] for p in batch]
 
-        resp = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=800,
-            messages=[{"role": "user", "content": f"""다음 일본어 뉴스 제목들을 한국어로 자연스럽게 번역해줘.
-한국 독자가 읽기 좋은 방식으로 번역하고, 너무 직역하지 마.
-
-제목 목록 (JSON 배열):
-{json.dumps(titles, ensure_ascii=False)}
-
-반드시 같은 수의 번역 결과를 JSON 배열로만 반환해줘. 예: ["번역1", "번역2", ...]"""}]
+        prompt = (
+            "다음 일본어 뉴스 제목들을 한국어로 자연스럽게 번역해줘.\n"
+            "한국 독자가 읽기 좋은 방식으로 번역하고, 너무 직역하지 마.\n\n"
+            f"제목 목록 (JSON 배열):\n{json.dumps(titles, ensure_ascii=False)}\n\n"
+            '반드시 같은 수의 번역 결과를 JSON 배열로만 반환해줘. 예: ["번역1", "번역2", ...]'
         )
-        text  = resp.content[0].text.strip()
+        headers = {
+            "x-api-key":         api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type":      "application/json",
+        }
+        payload = {
+            "model":      "claude-haiku-4-5-20251001",
+            "max_tokens": 800,
+            "messages":   [{"role": "user", "content": prompt}],
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.anthropic.com/v1/messages",
+                headers=headers,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=15)
+            ) as r:
+                if r.status != 200:
+                    log.warning("JP 번역 API %s", r.status)
+                    return posts
+                data = await r.json(content_type=None)
+
+        text  = data.get("content", [{}])[0].get("text", "").strip()
         match = re.search(r'\[.*\]', text, re.DOTALL)
         if match:
             translated = json.loads(match.group())
