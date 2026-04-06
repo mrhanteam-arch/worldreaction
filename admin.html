@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>컬처온도 어드민</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0d0d10;color:#ededf0;font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#1a1a20}::-webkit-scrollbar-thumb{background:#2a2a38;border-radius:2px}
+button,input,select,textarea{font-family:inherit}
+a{color:inherit;text-decoration:none}
+:root{--bg:#0d0d10;--sf:#1a1a20;--card:#1e1e28;--bd:#2a2a38;--bdL:#21212e;--tx:#ededf0;--sub:#8d8da0;--mu:#505068;--hot:#ff5e3a;--green:#2ecc71;--blue:#4fc3f7;--purple:#bf5af2;}
+
+/* ── 레이아웃 ── */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--sf);border-right:1px solid var(--bdL);padding:0;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{flex:1;padding:32px;max-width:900px}
+
+/* ── 사이드바 ── */
+.sb-logo{padding:20px 20px 16px;border-bottom:1px solid var(--bdL)}
+.sb-logo-title{font-size:15px;font-weight:800;color:var(--hot)}
+.sb-logo-sub{font-size:10px;color:var(--mu);margin-top:2px}
+.sb-section{padding:12px 12px 4px;font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.08em}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;margin:2px 8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--sub);transition:all 0.15s}
+.sb-item:hover{background:var(--card);color:var(--tx)}
+.sb-item.on{background:rgba(255,94,58,0.12);color:var(--hot);font-weight:700}
+.sb-item svg{width:16px;height:16px;flex-shrink:0}
+
+/* ── 공통 ── */
+.page-section{display:none}.page-section.active{display:block}
+.section-title{font-size:20px;font-weight:800;margin-bottom:4px}
+.section-sub{font-size:13px;color:var(--sub);margin-bottom:24px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:20px;margin-bottom:16px}
+.card-title{font-size:13px;font-weight:700;margin-bottom:16px;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-row.full{grid-template-columns:1fr}
+label{display:block;font-size:11px;font-weight:600;color:var(--mu);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em}
+input[type=text],input[type=number],input[type=date],input[type=color],select,textarea{width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid var(--bd);background:var(--card);color:var(--tx);font-size:13.5px;outline:none;transition:border-color 0.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--hot)}
+input[type=color]{height:40px;padding:4px 8px;cursor:pointer}
+textarea{min-height:80px;resize:vertical}
+.btn{padding:10px 18px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--hot);color:#fff}
+.btn-primary:hover{background:#e84e2a}
+.btn-ghost{background:var(--card);color:var(--sub);border:1px solid var(--bd)}
+.btn-ghost:hover{color:var(--tx);border-color:var(--sub)}
+.btn-danger{background:rgba(231,76,60,0.15);color:#e74c3c;border:1px solid rgba(231,76,60,0.3)}
+.btn-danger:hover{background:rgba(231,76,60,0.25)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.badge-green{background:rgba(46,204,113,0.15);color:#2ecc71}
+.badge-blue{background:rgba(79,195,247,0.15);color:#4fc3f7}
+.badge-orange{background:rgba(255,94,58,0.15);color:#ff5e3a}
+.toast{position:fixed;bottom:24px;right:24px;background:#2ecc71;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:999;transform:translateY(80px);opacity:0;transition:all 0.3s}
+.toast.show{transform:translateY(0);opacity:1}
+.divider{height:1px;background:var(--bdL);margin:16px 0}
+
+/* ── 큐레이션 목록 ── */
+.curation-list{display:flex;flex-direction:column;gap:10px}
+.curation-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);border:1px solid var(--bd);border-radius:12px;transition:all 0.15s}
+.curation-item:hover{border-color:var(--sub)}
+.curation-preview{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.curation-info{flex:1;min-width:0}
+.curation-name{font-size:14px;font-weight:800;margin-bottom:3px}
+.curation-tags{font-size:11.5px;color:var(--mu)}
+.curation-actions{display:flex;gap:6px;flex-shrink:0}
+.drag-handle{cursor:grab;color:var(--mu);padding:4px;opacity:0.5}
+.drag-handle:hover{opacity:1}
+
+/* ── 색상 프리셋 ── */
+.color-presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.color-preset{width:28px;height:28px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:all 0.15s}
+.color-preset:hover,.color-preset.on{border-color:#fff;transform:scale(1.1)}
+
+/* ── 통계 카드 ── */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:16px}
+.stat-num{font-size:26px;font-weight:800;color:var(--hot);margin-bottom:2px}
+.stat-label{font-size:11px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:0.04em}
+
+/* ── 이미지 업로드 ── */
+.img-upload-area{border:2px dashed var(--bd);border-radius:12px;background:var(--card);cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
+.img-upload-area:hover{border-color:var(--hot);background:rgba(255,94,58,0.04)}
+.img-upload-area.drag{border-color:var(--hot);background:rgba(255,94,58,0.08)}
+.img-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.img-upload-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;pointer-events:none}
+.img-upload-inner svg{opacity:0.3}
+.img-upload-label{font-size:12px;color:var(--mu);font-weight:600;text-align:center}
+.img-preview{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.img-del{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.7);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:2}
+.status-auto-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:7px;font-size:11px;font-weight:700;background:rgba(79,195,247,0.12);color:#4fc3f7;margin-top:6px}
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--bd);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left 0.2s}
+.toggle.on::after{left:21px}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- 사이드바 -->
+<div class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-title">🌡️ 컬처온도</div>
+    <div class="sb-logo-sub">어드민 대시보드</div>
+  </div>
+  <div class="sb-section">콘텐츠</div>
+  <div class="sb-item on" onclick="nav('curation')" id="nav-curation">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h8M4 18h8" stroke-linecap="round"/></svg>
+    큐레이션 관리
+  </div>
+  <div class="sb-item" onclick="nav('events')" id="nav-events">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>
+    이벤트 관리
+  </div>
+  <div class="sb-section">설정</div>
+  <div class="sb-item" onclick="nav('preview')" id="nav-preview">
+    <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-linecap="round"/><circle cx="12" cy="12" r="3"/></svg>
+    미리보기
+  </div>
+</div>
+
+<!-- 메인 -->
+<div class="main">
+
+  <!-- ── 큐레이션 관리 ── -->
+  <div class="page-section active" id="page-curation">
+    <div class="section-title">큐레이션 관리</div>
+    <div class="section-sub">홈 화면에 표시되는 테마 카드를 관리합니다. 태그와 연결하면 자동으로 이벤트가 모입니다.</div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--sub)" id="curationCount"></div>
+      <button class="btn btn-primary" onclick="openCurationForm()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+        새 큐레이션
+      </button>
+    </div>
+
+    <div class="curation-list" id="curationList"></div>
+
+    <!-- 큐레이션 폼 -->
+    <div class="card" id="curationForm" style="display:none;margin-top:20px;border-color:var(--hot)">
+      <div class="card-title" id="curationFormTitle">새 큐레이션</div>
+      <div class="form-row">
+        <div>
+          <label>제목</label>
+          <input type="text" id="fTitle" placeholder="데이트, 나들이, 무료입장...">
+        </div>
+        <div>
+          <label>아이콘 (이모지)</label>
+          <input type="text" id="fIcon" placeholder="💑" maxlength="4">
+        </div>
+      </div>
+      <div class="form-row full">
+        <div>
+          <label>연결 태그 (쉼표로 구분, vibes/keyword 값)</label>
+          <input type="text" id="fTags" placeholder="데이트, 인스타감성, 무료입장">
+          <div style="font-size:11px;color:var(--mu);margin-top:5px">동행: 데이트, 친구랑, 가족, 혼자도OK, 단체/모임 | 가격: 무료입장, 가성비, 럭셔리 | 분위기: 인스타감성, 힙한, 아늑한, 웅장한, 감성적인, 유니크한, 레트로, 아트 | 장소: 야외공연, 실내, 팝업, 전시, 공연장 | 시간: 주말추천, 나들이, 반나절, 야간추천 | 특징: 굿즈있음, 포토존, 체험형, 한정판, 예매필수, 반려동물, 키즈존 | 특수: __closing__ (종료임박)</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>시작 색상</label>
+          <input type="color" id="fColor1" value="#ff5e3a">
+          <div class="color-presets" id="presets1"></div>
+        </div>
+        <div>
+          <label>끝 색상</label>
+          <input type="color" id="fColor2" value="#c0392b">
+          <div class="color-presets" id="presets2"></div>
+        </div>
+      </div>
+      <!-- 미리보기 -->
+      <div style="margin-bottom:16px">
+        <label>카드 미리보기</label>
+        <div id="cardPreview" style="width:160px;height:90px;border-radius:16px;position:relative;display:flex;align-items:flex-end;padding:12px 14px;overflow:hidden;border:1px solid rgba(255,255,255,0.1)">
+          <div id="pvBg" style="position:absolute;inset:0"></div>
+          <div id="pvIcon" style="position:absolute;top:10px;right:12px;font-size:28px;z-index:1">💑</div>
+          <div style="position:relative;z-index:1">
+            <div id="pvTitle" style="font-size:14px;font-weight:800;color:#fff;margin-bottom:2px">데이트</div>
+            <div style="font-size:10.5px;color:rgba(255,255,255,0.65)">N개 이벤트</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="saveCuration()">저장</button>
+        <button class="btn btn-ghost" onclick="closeCurationForm()">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 이벤트 관리 ── -->
+  <div class="page-section" id="page-events">
+    <div class="section-title">이벤트 관리</div>
+    <div class="section-sub">이벤트를 등록·수정·삭제합니다. 저장하면 앱에 즉시 반영됩니다.</div>
+    <div class="stat-grid" id="evStats"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="evSearch" placeholder="이벤트 검색..." style="width:200px;padding:8px 12px;font-size:13px" oninput="renderEventList()">
+        <select id="evFilter" style="width:120px;padding:8px 12px;font-size:13px" onchange="renderEventList()">
+          <option value="">전체 상태</option>
+          <option value="ongoing">진행중</option>
+          <option value="upcoming">오픈예정</option>
+          <option value="ended">종료</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="openEventForm()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+        이벤트 등록
+      </button>
+    </div>
+
+    <!-- 이벤트 목록 -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="evList"></div>
+    </div>
+
+    <!-- 이벤트 등록/편집 폼 -->
+    <div class="card" id="eventForm" style="display:none;margin-top:20px;border-color:var(--hot)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div class="card-title" id="eventFormTitle" style="margin-bottom:0">이벤트 등록</div>
+        <button class="btn btn-ghost btn-sm" onclick="closeEventForm()">✕ 닫기</button>
+      </div>
+
+      <!-- 기본 정보 -->
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">기본 정보</div>
+      <div class="form-row full">
+        <div><label>이벤트명 *</label><input type="text" id="ef-title" placeholder="이벤트 제목을 입력하세요"></div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>카테고리 *</label>
+          <select id="ef-ct">
+            <option value="">선택</option>
+            <option value="뮤지컬">뮤지컬</option>
+            <option value="콘서트">콘서트</option>
+            <option value="페스티벌">페스티벌</option>
+            <option value="팝업스토어">팝업스토어</option>
+            <option value="전시/행사">전시/행사</option>
+            <option value="연극">연극</option>
+          </select>
+        </div>
+        <div>
+          <label>상태</label>
+          <div style="padding:10px 12px;border-radius:9px;border:1.5px solid var(--bd);background:var(--card);font-size:13px;color:var(--mu)">날짜 입력 시 자동 계산</div>
+          <div id="ef-st-preview" class="status-auto-badge" style="display:none"></div>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div><label>소개 설명</label><textarea id="ef-ds" placeholder="이벤트 소개를 입력하세요"></textarea></div>
+      </div>
+
+      <div class="divider"></div>
+      <!-- 이미지 업로드 -->
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">이미지</div>
+      <div class="form-row">
+        <div>
+          <label>포스터 이미지</label>
+          <div class="img-upload-area" id="posterArea" style="height:180px" ondragover="onDrag(event,'poster')" ondragleave="offDrag('poster')" ondrop="onDrop(event,'poster')">
+            <input type="file" accept="image/*" onchange="onFileChange(event,'poster')">
+            <div class="img-upload-inner" id="posterInner">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 16l5-5 4 4 3-3 5 5"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+              <div class="img-upload-label">클릭하거나 이미지를 드래그하세요<br><span style="color:var(--mu);font-weight:400">포스터/썸네일 (세로형 권장)</span></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label>배경 이미지</label>
+          <div class="img-upload-area" id="bgArea" style="height:180px" ondragover="onDrag(event,'bg')" ondragleave="offDrag('bg')" ondrop="onDrop(event,'bg')">
+            <input type="file" accept="image/*" onchange="onFileChange(event,'bg')">
+            <div class="img-upload-inner" id="bgInner">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 16l5-5 4 4 3-3 5 5"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+              <div class="img-upload-label">클릭하거나 이미지를 드래그하세요<br><span style="color:var(--mu);font-weight:400">히어로/배경 (가로형 권장)</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--mu);margin-top:-6px;margin-bottom:12px">이미지는 Base64로 변환되어 저장됩니다. 파일 크기가 크면 로컬스토리지 용량 초과가 발생할 수 있어요.</div>
+
+      <div class="divider"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">장소 · 일정 · 가격</div>
+      <div class="form-row">
+        <div><label>장소명 *</label><input type="text" id="ef-lo" placeholder="서울 성수동"></div>
+        <div>
+          <label>세부 지역 (district)</label>
+          <select id="ef-district">
+            <option value="">선택</option>
+            <option value="강남">강남</option><option value="홍대">홍대</option>
+            <option value="성수">성수</option><option value="한남">한남</option>
+            <option value="이태원">이태원</option><option value="잠실">잠실</option>
+            <option value="명동">명동</option><option value="동대문">동대문</option>
+            <option value="송파">송파</option><option value="여의도">여의도</option>
+            <option value="강북">강북</option><option value="기타">기타</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div><label>상세 주소</label><input type="text" id="ef-ad" placeholder="서울 성동구 왕십리로2길 20"></div>
+      </div>
+      <div class="form-row">
+        <div><label>시작일 *</label><input type="date" id="ef-sd"></div>
+        <div><label>종료일 *</label><input type="date" id="ef-ed"></div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>가격</label>
+          <input type="text" id="ef-pr" placeholder="무료 / R석 50,000원">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:12px;padding-bottom:2px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0">
+            <input type="checkbox" id="ef-fr" style="width:16px;height:16px;cursor:pointer">
+            <span style="font-size:13px;font-weight:600;color:var(--sub)">무료 입장</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <!-- 온도지수 섹션 -->
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">🌡️ 온도지수</div>
+      <div class="form-row">
+        <div>
+          <label>네이버 검색량 지수 (0~100)</label>
+          <input type="number" id="ef-naver" placeholder="0~100" min="0" max="100" style="width:100%">
+          <div style="font-size:11px;color:var(--mu);margin-top:4px">네이버 데이터랩 검색 트렌드 최고값 기준 상대값</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--mu);margin-bottom:8px">온도 구성 미리보기</div>
+          <div id="tempPreviewRows" style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--sub)">
+            <div>입력값을 채우면 자동 계산됩니다</div>
+          </div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bdL);display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--mu)">예상 온도</span>
+            <span id="tempPreviewVal" style="font-size:20px;font-weight:800;color:var(--hot)">—°C</span>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">태그 설정</div>
+      <div class="form-row full">
+        <div>
+          <label>분위기 태그 (vibes) — 큐레이션 연결에 사용</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="vibeCheckboxes"></div>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div>
+          <label>키워드 태그 (쉼표 구분)</label>
+          <input type="text" id="ef-tags" placeholder="굿즈, 포토존, 한정판">
+        </div>
+      </div>
+      <div class="form-row full">
+        <div>
+          <label>편의시설</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="amenityCheckboxes"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">링크</div>
+      <div class="form-row">
+        <div><label>홈페이지 URL</label><input type="text" id="ef-url-hp" placeholder="https://"></div>
+        <div><label>인스타그램 URL</label><input type="text" id="ef-url-ig" placeholder="https://instagram.com/"></div>
+      </div>
+      <div class="form-row">
+        <div><label>예매 URL</label><input type="text" id="ef-url-tk" placeholder="https://ticket.interpark.com/"></div>
+        <div><label>스토어 URL</label><input type="text" id="ef-url-sh" placeholder="https://"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveEvent()">저장</button>
+        <button class="btn btn-ghost" onclick="closeEventForm()">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 미리보기 ── -->
+  <div class="page-section" id="page-preview">
+    <div class="section-title">미리보기</div>
+    <div class="section-sub">현재 큐레이션 카드가 앱에서 어떻게 보이는지 확인합니다.</div>
+    <div style="max-width:390px">
+      <div style="background:#111114;border-radius:24px;padding:20px;border:1px solid #2a2a38">
+        <div style="font-size:13px;font-weight:800;margin-bottom:14px;color:#ff7a5a">컬처온도</div>
+        <div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#ededf0">테마별 보기</div>
+        <div id="previewGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+var STORAGE_KEY='co_curations';
+var COLOR_PRESETS=[
+  ["#ff5e3a","#c0392b"],["#e74c3c","#922b21"],
+  ["#f39c12","#b7770d"],["#2ecc71","#1a7a43"],
+  ["#27ae60","#1a6640"],["#2980b9","#1a5276"],
+  ["#8e44ad","#5b2c6f"],["#bf5af2","#7e35aa"],
+  ["#1abc9c","#148f77"],["#2c3e50","#1a252f"],
+];
+
+var DEFAULT_CURATIONS=[
+  {id:"c1",title:"데이트",icon:"💑",color1:"#ff5e3a",color2:"#c0392b",tags:["데이트"]},
+  {id:"c2",title:"나들이",icon:"🌿",color1:"#2ecc71",color2:"#1a7a43",tags:["야외공연","가족","주말추천"]},
+  {id:"c3",title:"무료 입장",icon:"🎟",color1:"#f39c12",color2:"#b7770d",tags:["무료입장"]},
+  {id:"c4",title:"인스타 감성",icon:"📸",color1:"#8e44ad",color2:"#5b2c6f",tags:["인스타감성"]},
+  {id:"c5",title:"혼자 즐기기",icon:"🎧",color1:"#2980b9",color2:"#1a5276",tags:["혼자도OK"]},
+  {id:"c6",title:"이번 주 마감",icon:"⏳",color1:"#e74c3c",color2:"#922b21",tags:["__closing__"]},
+];
+
+var SAMPLE_EVENTS=[
+  {id:"1",t:"시몬스 그로서리 스토어 성수",ct:"팝업스토어",district:"성수",vibes:["데이트","인스타감성","무료입장"],tags:["굿즈","F&B"],st:"ongoing",ed:"2026-04-20"},
+  {id:"2",t:"나이키 에어맥스 팝업",ct:"팝업스토어",district:"강남",vibes:["무료입장","힙한","데이트"],tags:["한정판"],st:"ongoing",ed:"2026-04-12"},
+  {id:"3",t:"서울재즈페스티벌 2026",ct:"페스티벌",district:"송파",vibes:["야외공연","데이트","가족","주말추천"],tags:["재즈"],st:"upcoming",ed:"2026-05-25"},
+  {id:"4",t:"디올 뷰티 가든 팝업",ct:"팝업스토어",district:"한남",vibes:["데이트","인스타감성","럭셔리"],tags:["뷰티"],st:"ongoing",ed:"2026-04-08"},
+  {id:"5",t:"레고 어른의 밤",ct:"팝업스토어",district:"잠실",vibes:["데이트","혼자도OK","힙한"],tags:["레고"],st:"ongoing",ed:"2026-04-07"},
+  {id:"6",t:"IU 콘서트",ct:"콘서트",district:"잠실",vibes:["주말추천","데이트"],tags:["IU"],st:"upcoming",ed:"2026-04-20"},
+  {id:"7",t:"바스키아 회고전",ct:"전시/행사",district:"동대문",vibes:["혼자도OK","인스타감성"],tags:["전시"],st:"ongoing",ed:"2026-06-30"},
+  {id:"8",t:"뮤지컬 '웃는 남자'",ct:"뮤지컬",district:"잠실",vibes:["데이트","주말추천"],tags:["뮤지컬"],st:"ongoing",ed:"2026-06-30"},
+  {id:"9",t:"연극 '고도를 기다리며'",ct:"연극",district:"명동",vibes:["혼자도OK"],tags:["연극"],st:"upcoming",ed:"2026-05-10"},
+  {id:"10",t:"포켓몬 팝업스토어",ct:"팝업스토어",district:"강남",vibes:["무료입장","가족","인스타감성"],tags:["포켓몬"],st:"ongoing",ed:"2026-04-13"},
+];
+
+function getCurations(){
+  try{var s=localStorage.getItem(STORAGE_KEY);return s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_CURATIONS));}
+  catch(e){return JSON.parse(JSON.stringify(DEFAULT_CURATIONS));}
+}
+function saveCurations(arr){localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));}
+
+// 네비
+function nav(page){
+  document.querySelectorAll('.page-section').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('on');});
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nav-'+page).classList.add('on');
+  if(page==='events')renderEvents();
+  if(page==='preview')renderPreview();
+}
+
+// ── 큐레이션 목록 렌더 ──
+function renderCurationList(){
+  var curations=getCurations();
+  document.getElementById('curationCount').textContent=curations.length+'개 테마 카드';
+  var html='';
+  curations.forEach(function(c,i){
+    var tagStr=c.tags.map(function(t){return t==='__closing__'?'종료임박':t;}).join(', ');
+    html+='<div class="curation-item" id="ci-'+c.id+'">'
+      +'<div class="drag-handle">⠿</div>'
+      +'<div class="curation-preview" style="background:linear-gradient(135deg,'+c.color1+','+c.color2+')">'+c.icon+'</div>'
+      +'<div class="curation-info">'
+      +'<div class="curation-name">'+c.title+'</div>'
+      +'<div class="curation-tags">'+tagStr+'</div>'
+      +'</div>'
+      +'<div class="curation-actions">'
+      +(i>0?'<button class="btn btn-ghost btn-sm" onclick="moveCuration(\''+c.id+'\',-1)" title="위로">↑</button>':'')
+      +(i<curations.length-1?'<button class="btn btn-ghost btn-sm" onclick="moveCuration(\''+c.id+'\',1)" title="아래로">↓</button>':'')
+      +'<button class="btn btn-ghost btn-sm" onclick="editCuration(\''+c.id+'\')">편집</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="deleteCuration(\''+c.id+'\')">삭제</button>'
+      +'</div>'
+      +'</div>';
+  });
+  document.getElementById('curationList').innerHTML=html;
+}
+
+// 폼 열기
+var editingId=null;
+function openCurationForm(id){
+  editingId=id||null;
+  var form=document.getElementById('curationForm');
+  document.getElementById('curationFormTitle').textContent=id?'큐레이션 편집':'새 큐레이션';
+  if(id){
+    var c=getCurations().find(function(x){return x.id===id;});
+    document.getElementById('fTitle').value=c.title;
+    document.getElementById('fIcon').value=c.icon;
+    document.getElementById('fTags').value=c.tags.join(', ');
+    document.getElementById('fColor1').value=c.color1;
+    document.getElementById('fColor2').value=c.color2;
+  } else {
+    document.getElementById('fTitle').value='';
+    document.getElementById('fIcon').value='';
+    document.getElementById('fTags').value='';
+    document.getElementById('fColor1').value='#ff5e3a';
+    document.getElementById('fColor2').value='#c0392b';
+  }
+  form.style.display='block';
+  renderColorPresets();
+  updatePreview();
+  form.scrollIntoView({behavior:'smooth'});
+}
+function editCuration(id){openCurationForm(id);}
+function closeCurationForm(){document.getElementById('curationForm').style.display='none';editingId=null;}
+
+// 색상 프리셋
+function renderColorPresets(){
+  var p1='',p2='';
+  COLOR_PRESETS.forEach(function(pair,i){
+    p1+='<div class="color-preset" style="background:'+pair[0]+'" onclick="applyPreset('+i+')" title="'+pair[0]+'"></div>';
+    p2+='<div class="color-preset" style="background:'+pair[1]+'" title="'+pair[1]+'"></div>';
+  });
+  document.getElementById('presets1').innerHTML=p1;
+  document.getElementById('presets2').innerHTML=p2;
+}
+function applyPreset(i){
+  document.getElementById('fColor1').value=COLOR_PRESETS[i][0];
+  document.getElementById('fColor2').value=COLOR_PRESETS[i][1];
+  updatePreview();
+}
+
+// 미리보기 업데이트
+function updatePreview(){
+  var c1=document.getElementById('fColor1').value;
+  var c2=document.getElementById('fColor2').value;
+  var icon=document.getElementById('fIcon').value||'✨';
+  var title=document.getElementById('fTitle').value||'제목';
+  document.getElementById('pvBg').style.background='linear-gradient(135deg,'+c1+','+c2+')';
+  document.getElementById('pvIcon').textContent=icon;
+  document.getElementById('pvTitle').textContent=title;
+}
+document.getElementById('fTitle').addEventListener('input',updatePreview);
+document.getElementById('fIcon').addEventListener('input',updatePreview);
+document.getElementById('fColor1').addEventListener('input',updatePreview);
+document.getElementById('fColor2').addEventListener('input',updatePreview);
+
+// 저장
+function saveCuration(){
+  var title=document.getElementById('fTitle').value.trim();
+  var icon=document.getElementById('fIcon').value.trim();
+  var tagsRaw=document.getElementById('fTags').value.trim();
+  if(!title){alert('제목을 입력해주세요.');return;}
+  if(!icon){alert('아이콘을 입력해주세요.');return;}
+  if(!tagsRaw){alert('태그를 입력해주세요.');return;}
+  var tags=tagsRaw.split(',').map(function(t){return t.trim();}).filter(Boolean);
+  var color1=document.getElementById('fColor1').value;
+  var color2=document.getElementById('fColor2').value;
+  var curations=getCurations();
+  if(editingId){
+    var idx=curations.findIndex(function(x){return x.id===editingId;});
+    if(idx>=0)curations[idx]={id:editingId,title:title,icon:icon,color1:color1,color2:color2,tags:tags};
+  } else {
+    curations.push({id:'c'+Date.now(),title:title,icon:icon,color1:color1,color2:color2,tags:tags});
+  }
+  saveCurations(curations);
+  closeCurationForm();
+  renderCurationList();
+  showToast(editingId?'큐레이션이 수정되었습니다':'새 큐레이션이 추가되었습니다');
+}
+
+// 삭제
+function deleteCuration(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  var curations=getCurations().filter(function(c){return c.id!==id;});
+  saveCurations(curations);
+  renderCurationList();
+  showToast('삭제되었습니다');
+}
+
+// 순서 변경
+function moveCuration(id,dir){
+  var curations=getCurations();
+  var idx=curations.findIndex(function(x){return x.id===id;});
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=curations.length)return;
+  var tmp=curations[idx];curations[idx]=curations[newIdx];curations[newIdx]=tmp;
+  saveCurations(curations);
+  renderCurationList();
+}
+
+// 기본값으로 초기화
+function resetToDefault(){
+  if(!confirm('기본 큐레이션으로 초기화하시겠습니까?'))return;
+  saveCurations(JSON.parse(JSON.stringify(DEFAULT_CURATIONS)));
+  renderCurationList();
+  showToast('초기화되었습니다');
+}
+
+// ── 날짜 기반 상태 자동 계산 ──
+var TODAY=new Date(); TODAY.setHours(0,0,0,0);
+function calcStatus(sd,ed){
+  if(!sd||!ed)return null;
+  var s=new Date(sd),e=new Date(ed);
+  s.setHours(0,0,0,0);e.setHours(0,0,0,0);
+  if(TODAY>e)return'ended';
+  if(TODAY<s)return'upcoming';
+  return'ongoing';
+}
+function updateTempPreview(){
+  var ns=Number(document.getElementById('ef-naver').value)||0;
+  var sd=document.getElementById('ef-sd').value;
+  var ed=document.getElementById('ef-ed').value;
+  var fr=document.getElementById('ef-fr').checked?1:0;
+  var score=0;
+  var rows=[];
+
+  // 네이버 검색량
+  var ns_pt=Math.round(ns*0.3);
+  score+=ns_pt;
+  rows.push('네이버 검색량 '+ns+' → <b>+'+ns_pt+'점</b>');
+
+  // 긴급도
+  if(sd&&ed){
+    var today=new Date();today.setHours(0,0,0,0);
+    var edD=new Date(ed);var sdD=new Date(sd);
+    var d=Math.ceil((edD-today)/864e5);
+    var span=Math.ceil((edD-sdD)/864e5);
+    var urgPt=0;
+    if(d<=3)urgPt=25;else if(d<=7)urgPt=15;else if(d<=14)urgPt=7;
+    if(urgPt){score+=urgPt;rows.push('마감 D-'+d+' → <b>+'+urgPt+'점</b>');}
+    var newPt=0;
+    var a=Math.ceil((today-sdD)/864e5);
+    if(a<=7&&a>=0){newPt=10;score+=newPt;rows.push('신규 오픈 → <b>+'+newPt+'점</b>');}
+    var spanPt=0;
+    if(span<=7)spanPt=12;else if(span<=14)spanPt=6;
+    if(spanPt){score+=spanPt;rows.push('단기 행사 '+span+'일 → <b>+'+spanPt+'점</b>');}
+  }
+  // 무료
+  if(fr){score+=8;rows.push('무료입장 → <b>+8점</b>');}
+
+  var pct=Math.min(100,Math.round(score/1.25));
+  var col=pct>=80?'#ff5e3a':pct>=60?'#ff9500':pct>=30?'#4fc3f7':'#90a4ae';
+  document.getElementById('tempPreviewRows').innerHTML=rows.length?rows.join('<br>'):'데이터 입력 시 계산됩니다';
+  document.getElementById('tempPreviewVal').textContent=pct+'°C';
+  document.getElementById('tempPreviewVal').style.color=col;
+}
+document.addEventListener('input',function(e){
+  if(['ef-naver','ef-sd','ef-ed'].indexOf(e.target.id)>=0)updateTempPreview();
+});
+document.addEventListener('change',function(e){
+  if(e.target.id==='ef-fr')updateTempPreview();
+});
+function updateStatusPreview(){
+  var sd=document.getElementById('ef-sd').value;
+  var ed=document.getElementById('ef-ed').value;
+  var pv=document.getElementById('ef-st-preview');
+  if(!pv)return;
+  var st=calcStatus(sd,ed);
+  if(!st){pv.style.display='none';return;}
+  var label={ongoing:'진행중',upcoming:'오픈예정',ended:'종료'}[st];
+  var color={ongoing:'#2ecc71',upcoming:'#4fc3f7',ended:'#505068'}[st];
+  pv.style.display='inline-flex';
+  pv.style.background=color+'22';
+  pv.style.color=color;
+  pv.textContent='자동 상태: '+label;
+}
+
+// ── 이미지 업로드 ──
+var imgData={poster:null,bg:null};
+
+function onFileChange(e,type){
+  var file=e.target.files[0];
+  if(!file)return;
+  readImg(file,type);
+}
+function onDrag(e,type){e.preventDefault();document.getElementById(type==='poster'?'posterArea':'bgArea').classList.add('drag');}
+function offDrag(type){document.getElementById(type==='poster'?'posterArea':'bgArea').classList.remove('drag');}
+function onDrop(e,type){
+  e.preventDefault();offDrag(type);
+  var file=e.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/'))return;
+  readImg(file,type);
+}
+function readImg(file,type){
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    imgData[type]=ev.target.result;
+    renderImgPreview(type,ev.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+function renderImgPreview(type,src){
+  var areaId=type==='poster'?'posterArea':'bgArea';
+  var innerId=type==='poster'?'posterInner':'bgInner';
+  var area=document.getElementById(areaId);
+  var inner=document.getElementById(innerId);
+  // 기존 preview 제거
+  var old=area.querySelector('.img-preview');if(old)old.remove();
+  var oldDel=area.querySelector('.img-del');if(oldDel)oldDel.remove();
+  // 새 preview
+  var img=document.createElement('img');
+  img.className='img-preview';img.src=src;
+  var del=document.createElement('button');
+  del.className='img-del';del.innerHTML='✕';
+  del.onclick=function(e){e.preventDefault();e.stopPropagation();clearImg(type);};
+  area.appendChild(img);area.appendChild(del);
+  inner.style.opacity='0';
+}
+function clearImg(type){
+  imgData[type]=null;
+  var areaId=type==='poster'?'posterArea':'bgArea';
+  var innerId=type==='poster'?'posterInner':'bgInner';
+  var area=document.getElementById(areaId);
+  var old=area.querySelector('.img-preview');if(old)old.remove();
+  var oldDel=area.querySelector('.img-del');if(oldDel)oldDel.remove();
+  document.getElementById(innerId).style.opacity='1';
+  // file input 초기화
+  var inp=area.querySelector('input[type=file]');if(inp)inp.value='';
+}
+function resetImgPreviews(){
+  clearImg('poster');clearImg('bg');
+}
+
+// ── 이벤트 CRUD ──
+var EV_KEY='co_events';
+var VIBES_ALL=[
+  // 👥 동행 유형
+  {v:"데이트",g:"동행"},
+  {v:"친구랑",g:"동행"},
+  {v:"가족",g:"동행"},
+  {v:"혼자도OK",g:"동행"},
+  {v:"단체/모임",g:"동행"},
+  // 💰 가격
+  {v:"무료입장",g:"가격"},
+  {v:"가성비",g:"가격"},
+  {v:"럭셔리",g:"가격"},
+  // 🎨 분위기
+  {v:"인스타감성",g:"분위기"},
+  {v:"힙한",g:"분위기"},
+  {v:"아늑한",g:"분위기"},
+  {v:"웅장한",g:"분위기"},
+  {v:"감성적인",g:"분위기"},
+  {v:"유니크한",g:"분위기"},
+  {v:"레트로",g:"분위기"},
+  {v:"아트",g:"분위기"},
+  // 📍 장소/형태
+  {v:"야외공연",g:"장소"},
+  {v:"실내",g:"장소"},
+  {v:"팝업",g:"장소"},
+  {v:"전시",g:"장소"},
+  {v:"공연장",g:"장소"},
+  // ⏰ 시간
+  {v:"주말추천",g:"시간"},
+  {v:"나들이",g:"시간"},
+  {v:"반나절",g:"시간"},
+  {v:"야간추천",g:"시간"},
+  // 🎯 특징
+  {v:"굿즈있음",g:"특징"},
+  {v:"포토존",g:"특징"},
+  {v:"체험형",g:"특징"},
+  {v:"한정판",g:"특징"},
+  {v:"예매필수",g:"특징"},
+  {v:"반려동물",g:"특징"},
+  {v:"키즈존",g:"특징"},
+];
+var AMENITIES_ALL=[{k:"parking",l:"주차"},{k:"wifi",l:"와이파이"},{k:"photo",l:"포토존"},{k:"kids",l:"아이동반"},{k:"wheelchair",l:"휠체어"}];
+var editingEvId=null;
+
+function getEvents(){
+  try{
+    var s=localStorage.getItem(EV_KEY);
+    var events=s?JSON.parse(s):JSON.parse(JSON.stringify(SAMPLE_EVENTS));
+    // 모든 이벤트 상태 자동 갱신
+    return events.map(function(e){
+      var auto=calcStatus(e.sd,e.ed);
+      if(auto)e.st=auto;
+      return e;
+    });
+  }catch(ex){return JSON.parse(JSON.stringify(SAMPLE_EVENTS));}
+}
+function saveEvents(arr){
+  // 저장 전 상태 자동 계산 적용
+  arr=arr.map(function(e){var auto=calcStatus(e.sd,e.ed);if(auto)e.st=auto;return e;});
+  localStorage.setItem(EV_KEY,JSON.stringify(arr));
+}
+
+function renderEvents(){
+  var events=getEvents();
+  var q=(document.getElementById('evSearch')||{value:''}).value.toLowerCase();
+  var st=(document.getElementById('evFilter')||{value:''}).value;
+  var filtered=events.filter(function(e){
+    return(!q||(e.t||'').toLowerCase().includes(q)||(e.lo||'').toLowerCase().includes(q))
+      &&(!st||e.st===st);
+  });
+  var ongoing=events.filter(function(e){return e.st==='ongoing';}).length;
+  var upcoming=events.filter(function(e){return e.st==='upcoming';}).length;
+  var ended=events.filter(function(e){return e.st==='ended';}).length;
+  document.getElementById('evStats').innerHTML=
+    '<div class="stat-card"><div class="stat-num">'+events.length+'</div><div class="stat-label">전체</div></div>'
+    +'<div class="stat-card"><div class="stat-num" style="color:#2ecc71">'+ongoing+'</div><div class="stat-label">진행중</div></div>'
+    +'<div class="stat-card"><div class="stat-num" style="color:#4fc3f7">'+upcoming+'</div><div class="stat-label">오픈예정</div></div>';
+  if(!filtered.length){
+    document.getElementById('evList').innerHTML='<div style="text-align:center;padding:40px;color:var(--mu)">등록된 이벤트가 없어요</div>';
+    return;
+  }
+  var html='';
+  filtered.forEach(function(e){
+    var stColor={ongoing:'#2ecc71',upcoming:'#4fc3f7',ended:'#505068'}[e.st]||'#505068';
+    var stLabel={ongoing:'진행중',upcoming:'오픈예정',ended:'종료'}[e.st]||e.st;
+    var vibeHtml=(e.vibes||[]).map(function(v){return'<span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;background:rgba(191,90,242,0.15);color:#bf5af2;margin:2px">'+v+'</span>';}).join('');
+    var tagHtml=(e.tags||[]).map(function(t){return'<span style="display:inline-block;padding:2px 7px;border-radius:5px;font-size:10px;background:var(--card);color:var(--mu);border:1px solid var(--bd);margin:2px">#'+t+'</span>';}).join('');
+    // 썸네일
+    var thumb=e.imgPoster?'<img src="'+e.imgPoster+'" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0">'
+      :'<div style="width:44px;height:44px;border-radius:10px;background:var(--card);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+getIcon(e.ct)+'</div>';
+    html+='<div style="display:flex;align-items:flex-start;gap:14px;padding:16px 20px;border-bottom:1px solid var(--bdL);transition:background 0.1s" onmouseover="this.style.background=\'var(--card)\'" onmouseout="this.style.background=\'\'">'
+      +thumb
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'
+      +'<span style="font-size:13.5px;font-weight:700">'+e.t+'</span>'
+      +'<span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:'+stColor+'22;color:'+stColor+'">'+stLabel+'</span>'
+      +(e.fr?'<span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(46,204,113,0.15);color:#2ecc71">무료</span>':'')
+      +'</div>'
+      +'<div style="font-size:11.5px;color:var(--mu);margin-bottom:5px">'+e.ct+' · '+(e.district||'')+' · '+(e.lo||'')+' · '+(e.sd||'')+' ~ '+(e.ed||'')+'</div>'
+      +'<div>'+vibeHtml+tagHtml+'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:6px;flex-shrink:0">'
+      +'<button class="btn btn-ghost btn-sm" onclick="openEventForm(\''+e.id+'\')">편집</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="deleteEvent(\''+e.id+'\')">삭제</button>'
+      +'</div></div>';
+  });
+  document.getElementById('evList').innerHTML=html;
+}
+
+function getIcon(ct){
+  var m={"뮤지컬":"🎭","콘서트":"🎤","페스티벌":"🎪","팝업스토어":"🏪","전시/행사":"🎨","연극":"🎬"};
+  return m[ct]||"🎫";
+}
+
+function openEventForm(id){
+  editingEvId=id||null;
+  var form=document.getElementById('eventForm');
+  document.getElementById('eventFormTitle').textContent=id?'이벤트 편집':'이벤트 등록';
+  resetImgPreviews();
+  imgData={poster:null,bg:null};
+  // vibes 체크박스
+  // 그룹별로 묶어서 렌더
+  var groups={};
+  var groupOrder=[];
+  VIBES_ALL.forEach(function(item){
+    if(!groups[item.g]){groups[item.g]=[];groupOrder.push(item.g);}
+    groups[item.g].push(item.v);
+  });
+  var html='';
+  groupOrder.forEach(function(g){
+    html+='<div style="margin-bottom:10px">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--mu);letter-spacing:0.06em;margin-bottom:6px;text-transform:uppercase">'+g+'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    groups[g].forEach(function(v){
+      html+='<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;background:var(--card);border:1px solid var(--bd);cursor:pointer;font-size:12px;font-weight:600;color:var(--sub);transition:all 0.15s">'
+        +'<input type="checkbox" class="vibe-chk" value="'+v+'" style="width:13px;height:13px;cursor:pointer;accent-color:var(--hot)"> '+v+'</label>';
+    });
+    html+='</div></div>';
+  });
+  document.getElementById('vibeCheckboxes').innerHTML=html;
+  // 편의시설 체크박스
+  document.getElementById('amenityCheckboxes').innerHTML=AMENITIES_ALL.map(function(a){
+    return'<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;background:var(--card);border:1px solid var(--bd);cursor:pointer;font-size:12px;font-weight:600;color:var(--sub)">'
+      +'<input type="checkbox" class="amenity-chk" value="'+a.k+'" style="width:14px;height:14px;cursor:pointer"> '+a.l+'</label>';
+  }).join('');
+
+  if(id){
+    var e=getEvents().find(function(x){return x.id===id;});
+    if(!e)return;
+    document.getElementById('ef-title').value=e.t||'';
+    document.getElementById('ef-ct').value=e.ct||'';
+    document.getElementById('ef-ds').value=e.ds||'';
+    document.getElementById('ef-lo').value=e.lo||'';
+    document.getElementById('ef-district').value=e.district||'';
+    document.getElementById('ef-ad').value=e.ad||'';
+    document.getElementById('ef-sd').value=e.sd||'';
+    document.getElementById('ef-ed').value=e.ed||'';
+    document.getElementById('ef-pr').value=e.pr||'';
+    document.getElementById('ef-fr').checked=!!e.fr;
+    document.getElementById('ef-naver').value=e.naver_score||0;
+    document.getElementById('ef-tags').value=(e.tags||[]).join(', ');
+    // 이미지 복원
+    if(e.imgPoster){imgData.poster=e.imgPoster;renderImgPreview('poster',e.imgPoster);}
+    if(e.imgBg){imgData.bg=e.imgBg;renderImgPreview('bg',e.imgBg);}
+    (e.vibes||[]).forEach(function(v){var c=document.querySelector('.vibe-chk[value="'+v+'"]');if(c)c.checked=true;});
+    (e.amenities||[]).forEach(function(a){var c=document.querySelector('.amenity-chk[value="'+a+'"]');if(c)c.checked=true;});
+    var links=parseLinksAdmin(e.sr||'');
+    document.getElementById('ef-url-hp').value=links.homepage||'';
+    document.getElementById('ef-url-ig').value=links.instagram||'';
+    document.getElementById('ef-url-tk').value=links.ticket||'';
+    document.getElementById('ef-url-sh').value=links.shop||'';
+  } else {
+    ['ef-title','ef-ds','ef-lo','ef-ad','ef-pr','ef-tags','ef-url-hp','ef-url-ig','ef-url-tk','ef-url-sh'].forEach(function(fid){document.getElementById(fid).value='';});
+    document.getElementById('ef-ct').value='';
+    document.getElementById('ef-district').value='';
+    document.getElementById('ef-sd').value='';
+    document.getElementById('ef-ed').value='';
+    document.getElementById('ef-fr').checked=false;
+    document.getElementById('ef-naver').value=0;
+  }
+  updateStatusPreview();
+  form.style.display='block';
+  form.scrollIntoView({behavior:'smooth'});
+}
+
+// 날짜 변경 시 상태 미리보기 갱신
+document.addEventListener('change',function(e){
+  if(e.target.id==='ef-sd'||e.target.id==='ef-ed')updateStatusPreview();
+});
+
+function parseLinksAdmin(sr){
+  var result={};
+  if(!sr)return result;
+  sr.split(',').forEach(function(s){var p=s.trim().split('|');if(p.length>=2)result[p[0].trim()]=p.slice(1).join('|').trim();});
+  return result;
+}
+function buildSr(){
+  var parts=[];
+  var hp=document.getElementById('ef-url-hp').value.trim();
+  var ig=document.getElementById('ef-url-ig').value.trim();
+  var tk=document.getElementById('ef-url-tk').value.trim();
+  var sh=document.getElementById('ef-url-sh').value.trim();
+  if(hp)parts.push('homepage|'+hp);
+  if(ig)parts.push('instagram|'+ig);
+  if(tk)parts.push('ticket|'+tk);
+  if(sh)parts.push('shop|'+sh);
+  return parts.join(',');
+}
+
+function saveEvent(){
+  var title=document.getElementById('ef-title').value.trim();
+  var ct=document.getElementById('ef-ct').value;
+  var lo=document.getElementById('ef-lo').value.trim();
+  var sd=document.getElementById('ef-sd').value;
+  var ed=document.getElementById('ef-ed').value;
+  if(!title){alert('이벤트명을 입력해주세요.');return;}
+  if(!ct){alert('카테고리를 선택해주세요.');return;}
+  if(!lo){alert('장소를 입력해주세요.');return;}
+  if(!sd||!ed){alert('시작일과 종료일을 입력해주세요.');return;}
+  var vibes=Array.from(document.querySelectorAll('.vibe-chk:checked')).map(function(c){return c.value;});
+  var amenities=Array.from(document.querySelectorAll('.amenity-chk:checked')).map(function(c){return c.value;});
+  var tags=document.getElementById('ef-tags').value.split(',').map(function(t){return t.trim();}).filter(Boolean);
+  var evObj={
+    id:editingEvId||('ev'+Date.now()),
+    t:title, ct:ct,
+    st:calcStatus(sd,ed)||'ongoing',
+    ds:document.getElementById('ef-ds').value.trim(),
+    lo:lo, district:document.getElementById('ef-district').value,
+    ad:document.getElementById('ef-ad').value.trim(),
+    sd:sd, ed:ed,
+    pr:document.getElementById('ef-pr').value.trim(),
+    fr:document.getElementById('ef-fr').checked?1:0,
+    sr:buildSr(), vibes:vibes, amenities:amenities, tags:tags,
+    imgPoster:imgData.poster||null,
+    imgBg:imgData.bg||null,
+    naver_score:Number(document.getElementById('ef-naver').value)||0,
+    vc:0,lc:0,bc:0,pk:99,ca:new Date().toISOString().split('T')[0],
+  };
+  var events=getEvents();
+  if(editingEvId){
+    var idx=events.findIndex(function(x){return x.id===editingEvId;});
+    if(idx>=0){evObj.vc=events[idx].vc||0;evObj.lc=events[idx].lc||0;evObj.pk=events[idx].pk||99;evObj.ca=events[idx].ca||evObj.ca;events[idx]=evObj;}
+    else events.push(evObj);
+  } else {evObj.pk=events.length+1;events.push(evObj);}
+  try{saveEvents(events);}catch(err){alert('저장 실패: 이미지 용량이 너무 큽니다. 이미지를 제거하거나 더 작은 파일을 사용해주세요.');return;}
+  closeEventForm();
+  renderEvents();
+  showToast(editingEvId?'이벤트가 수정되었습니다 ✓':'이벤트가 등록되었습니다 ✓');
+}
+
+function deleteEvent(id){
+  if(!confirm('이 이벤트를 삭제하시겠습니까?'))return;
+  saveEvents(getEvents().filter(function(e){return e.id!==id;}));
+  renderEvents();
+  showToast('삭제되었습니다');
+}
+function closeEventForm(){document.getElementById('eventForm').style.display='none';editingEvId=null;}
+
+
+// ── 앱 미리보기 ──
+function renderPreview(){
+  var curations=getCurations();
+  var html='';
+  curations.forEach(function(c){
+    var isWide=c.wide;
+    var cnt=Math.floor(Math.random()*5)+1;
+    html+='<div style="border-radius:14px;overflow:hidden;cursor:pointer;height:90px;display:flex;align-items:flex-end;padding:12px 14px;position:relative;border:1px solid rgba(255,255,255,0.06)'+(isWide?';grid-column:span 2':'')+'">'
+      +'<div style="position:absolute;inset:0;background:linear-gradient(135deg,'+c.color1+','+c.color2+')"></div>'
+      +'<div style="position:absolute;top:10px;right:12px;font-size:24px;z-index:1">'+c.icon+'</div>'
+      +'<div style="position:relative;z-index:1">'
+      +'<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px">'+c.title+'</div>'
+      +'<div style="font-size:10px;color:rgba(255,255,255,0.65)">'+cnt+'개 이벤트</div>'
+      +'</div></div>';
+  });
+  document.getElementById('previewGrid').innerHTML=html;
+}
+
+// 토스트
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2500);
+}
+
+// 초기화
+renderCurationList();
+renderEvents();
+</script>
+</body>
+</html>
