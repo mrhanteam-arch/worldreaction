@@ -32,9 +32,47 @@ a{color:inherit;text-decoration:none}
   padding:6px 4px 16px;
   z-index:100;gap:0;
 }
-.kopis-credit{
-  text-align:center;font-size:9.5px;color:rgba(255,255,255,0.2);
-  padding:12px 20px 80px;
+.credit-block{
+  padding:20px 20px 80px;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  border-top:1px solid var(--bdL);
+  margin-top:8px;
+}
+.credit-row{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  flex-wrap:wrap;
+}
+/* KOPIS 출처 */
+.kopis-credit-link{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;color:rgba(255,255,255,0.25);
+  text-decoration:none;transition:color 0.2s;
+  font-weight:500;letter-spacing:0.01em;
+}
+.kopis-credit-link:hover{color:rgba(255,255,255,0.5);}
+.kopis-credit-link svg{opacity:0.5;flex-shrink:0;}
+.credit-divider{width:1px;height:12px;background:rgba(255,255,255,0.1);}
+/* 네이버 OpenAPI 배지 */
+.naver-credit{
+  display:inline-flex;align-items:center;gap:0;
+  text-decoration:none;opacity:0.45;transition:opacity 0.2s;
+  line-height:1;
+}
+.naver-credit:hover{opacity:0.75;}
+.naver-credit-powered{
+  font-size:8.5px;color:rgba(255,255,255,0.7);
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  font-weight:400;letter-spacing:0.01em;margin-right:4px;
+}
+.naver-credit-n{
+  font-size:11px;font-weight:900;color:#03c75a;
+  font-family:-apple-system,BlinkMacSystemFont,'Arial Black',sans-serif;
+  letter-spacing:-0.02em;
+}
+.naver-credit-api{
+  font-size:11px;font-weight:700;color:rgba(255,255,255,0.85);
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  letter-spacing:-0.01em;
 }
 .bnav-i{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -172,6 +210,7 @@ a{color:inherit;text-decoration:none}
 .rk-n-v{font-size:17px;font-weight:800;line-height:1}
 .rk-ch{margin-top:3px;font-size:10px;font-weight:700;line-height:1}
 .rk-ch.up{color:var(--hot)}.rk-ch.dn{color:var(--cool)}.rk-ch.sm{color:var(--mu)}
+.rk-ch.new-entry{color:#bf5af2;font-size:9px}
 .rk-img{width:50px;height:66px;border-radius:5px;overflow:hidden;flex-shrink:0;margin-right:12px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:22px}
 .rk-info{flex:1;min-width:0;margin-right:10px}
 .rk-title{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;line-height:1.2}
@@ -191,12 +230,12 @@ a{color:inherit;text-decoration:none}
 .thermo-num{font-size:11.5px;font-weight:800;margin-top:3px;line-height:1}
 /* 온도 툴팁 */
 .thermo-tip{
-  display:none;position:absolute;bottom:calc(100% + 8px);right:0;
+  display:none;position:fixed;
   background:#1a1a28;border:1px solid #2a2a38;border-radius:10px;
-  padding:10px 12px;width:176px;z-index:999;
-  box-shadow:0 8px 24px rgba(0,0,0,0.5);pointer-events:none;
+  padding:10px 12px;width:204px;z-index:9999;
+  box-shadow:0 8px 24px rgba(0,0,0,0.6);pointer-events:none;
 }
-.thermo:hover .thermo-tip{display:block}
+.thermo-tip.show{display:block}
 .thermo-tip-title{font-size:10px;font-weight:700;color:#505068;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px}
 .thermo-tip-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;font-size:11px}
 .thermo-tip-label{color:#8d8da0}
@@ -204,6 +243,28 @@ a{color:inherit;text-decoration:none}
 .thermo-tip-bar{height:3px;border-radius:2px;background:#2a2a38;margin-top:2px;margin-bottom:6px;overflow:hidden}
 .thermo-tip-fill{height:100%;border-radius:2px}
 .thermo-tip-divider{height:1px;background:#21212e;margin:6px 0}
+/* 상세 온도 카드 */
+.det-score-card{position:relative;cursor:default}
+.det-score-bd{
+  display:none;position:absolute;left:-1px;right:-1px;top:calc(100% + 1px);
+  background:rgba(18,18,26,0.97);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.07);
+  border-top:none;
+  border-radius:0 0 14px 14px;
+  padding:14px 16px 16px;
+  z-index:50;
+  box-shadow:0 16px 40px rgba(0,0,0,0.6);
+}
+.det-score-bd.show{display:block}
+/* 브레이크다운 행 */
+.bd-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.bd-label{font-size:11.5px;color:#6e6e88;display:flex;align-items:center;gap:5px}
+.bd-hint{font-size:9.5px;color:#3a3a52;background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:4px}
+.bd-val{font-size:12px;font-weight:800;letter-spacing:-0.02em}
+.bd-val span{font-size:9px;font-weight:400;color:#3a3a52}
+.bd-bar-wrap{height:2px;border-radius:1px;background:rgba(255,255,255,0.05);overflow:hidden;margin-bottom:8px}
+.bd-bar-fill{height:100%;border-radius:1px;opacity:0.85}
 /* 캘린더 */
 .cal-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:12px 20px}
 .cal-nav button{background:none;border:none;color:var(--sub);font-size:18px;padding:6px;cursor:pointer}
@@ -315,6 +376,14 @@ a{color:inherit;text-decoration:none}
 .ic-insta{background:linear-gradient(135deg,#f09433,#dc2743)}
 .ic-ticket{background:linear-gradient(135deg,#bf5af2,#7e5bef)}
 .ic-shop{background:linear-gradient(135deg,#ff5e3a,#ff2d55)}
+.ic-kopis{background:linear-gradient(135deg,#1a7a43,#0f4f2a)}
+.ic-naver{background:#03c75a}
+/* 예매 버튼 (상세 하단 고정) */
+.booking-bar{position:sticky;bottom:0;left:0;right:0;background:linear-gradient(transparent,var(--bg) 28%);padding:16px 20px 28px;display:flex;gap:10px;z-index:50}
+.booking-btn-main{flex:1;padding:15px;border-radius:14px;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border:none;background:linear-gradient(135deg,#ff5e3a,#ff2d55);color:#fff;box-shadow:0 4px 20px rgba(255,60,40,0.4);transition:all 0.15s}
+.booking-btn-main:active{transform:scale(0.97)}
+.booking-btn-kopis{flex:0 0 52px;padding:15px;border-radius:14px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--bd);background:var(--sf);color:var(--sub);text-decoration:none;transition:all 0.15s}
+.booking-btn-kopis:hover{color:var(--tx);border-color:var(--sub)}
 .empty{text-align:center;padding:60px 20px;color:var(--mu)}
 /* 검색 모달 */
 .modal{position:fixed;inset:0;background:var(--bg);z-index:200;display:none;animation:fi 0.2s}
@@ -381,39 +450,73 @@ a{color:inherit;text-decoration:none}
 <body>
 <div id="app">
   <!-- 로그인 -->
-  <div id="page-login" class="page login-page">
-    <div class="login-hero">
-      <div class="login-logo" style="background:linear-gradient(145deg,#ff5e3a,#ff2d55);box-shadow:0 8px 28px rgba(255,94,58,0.5)">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="11.5" cy="17.5" r="2" fill="white"/>
-          <rect x="10.25" y="9" width="2.5" height="7" rx="1.25" fill="white"/>
-        </svg>
+  <div id="page-login" class="page login-page" style="position:relative;overflow:hidden">
+
+    <!-- 상단 그라데이션 배경 -->
+    <div style="position:absolute;top:0;left:0;right:0;height:400px;background:linear-gradient(180deg,rgba(255,60,40,0.13) 0%,transparent 100%);pointer-events:none;z-index:0"></div>
+
+    <!-- 뒤로가기 버튼 (MY탭에서 진입했을 때 표시) -->
+    <button id="loginBackBtn" onclick="go(curNav&&curNav!=='login'?curNav:'home')" style="position:absolute;top:52px;left:16px;z-index:10;width:38px;height:38px;border-radius:12px;border:none;background:rgba(255,255,255,0.07);color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <!-- 브랜드 영역 -->
+    <div style="display:flex;flex-direction:column;align-items:center;padding:108px 24px 0;position:relative;z-index:1">
+
+      <!-- 홈 헤더 텍스트 스타일 동일하게 -->
+      <div style="font-size:48px;font-weight:900;letter-spacing:-0.06em;background:linear-gradient(95deg,#ff6b4a 0%,#ff2d55 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:12px">컬처온도</div>
+
+      <!-- 홈 서브 텍스트 -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:22px">
+        <span style="font-size:11px;font-weight:600;color:#48485e;letter-spacing:0.01em">문화큐레이션 플랫폼</span>
+        <span style="width:2px;height:2px;border-radius:50%;background:#323248;display:inline-block"></span>
+        <span style="font-size:11px;font-weight:600;color:#48485e;letter-spacing:0.01em">트렌드 온도랭킹</span>
       </div>
-      <div class="login-title" style="background:linear-gradient(90deg,#ff7a5a,#ff2d55);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px;letter-spacing:-0.04em">컬처온도</div>
-      <div class="login-sub">문화생활 온도 랭킹 서비스<br><span style="font-size:12px;color:#505068">cultureondo.com</span></div>
-      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center">
-        <span style="padding:4px 10px;border-radius:20px;font-size:10.5px;font-weight:700;background:rgba(255,94,58,0.12);color:#ff7a5a;border:1px solid rgba(255,94,58,0.2)">🔥 실시간 온도랭킹</span>
-        <span style="padding:4px 10px;border-radius:20px;font-size:10.5px;font-weight:700;background:rgba(191,90,242,0.1);color:#bf5af2;border:1px solid rgba(191,90,242,0.2)">✨ 문화 큐레이션</span>
-        <span style="padding:4px 10px;border-radius:20px;font-size:10.5px;font-weight:700;background:rgba(79,195,247,0.1);color:#4fc3f7;border:1px solid rgba(79,195,247,0.2)">🎯 팝업 · 전시 · 공연</span>
+
+      <!-- 피처 배지 -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+        <span style="padding:4px 11px;border-radius:20px;font-size:10.5px;font-weight:700;background:rgba(255,94,58,0.12);color:#ff7a5a;border:1px solid rgba(255,94,58,0.18)">🔥 실시간 온도랭킹</span>
+        <span style="padding:4px 11px;border-radius:20px;font-size:10.5px;font-weight:700;background:rgba(191,90,242,0.1);color:#bf5af2;border:1px solid rgba(191,90,242,0.18)">✨ 큐레이션</span>
+        <span style="padding:4px 11px;border-radius:20px;font-size:10.5px;font-weight:700;background:rgba(79,195,247,0.1);color:#4fc3f7;border:1px solid rgba(79,195,247,0.18)">📌 저장 · 좋아요</span>
       </div>
     </div>
-    <div class="login-body">
-      <button class="social-btn btn-naver" onclick="socialLogin('naver')">
-        <div class="s-icon" style="background:#fff;color:#03c75a;border-radius:3px"><b>N</b></div>
+
+    <!-- 로그인 버튼 영역 -->
+    <div style="padding:44px 24px 0;display:flex;flex-direction:column;gap:11px;position:relative;z-index:1">
+
+      <!-- 네이버 -->
+      <button onclick="socialLogin('naver')" style="width:100%;height:54px;border-radius:14px;border:none;background:#03c75a;color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:inherit" ontouchstart="this.style.opacity='0.85'" ontouchend="this.style.opacity='1'" onmousedown="this.style.opacity='0.85'" onmouseup="this.style.opacity='1'">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M13.3 12.6L10.4 8H8v8h2.7v-4.6L13.6 16H16V8h-2.7v4.6z" fill="white"/></svg>
         네이버로 계속하기
       </button>
-      <button class="social-btn btn-kakao" onclick="socialLogin('kakao')">
-        <div class="s-icon" style="background:#3c1e1e;color:#fee500;border-radius:50%">💬</div>
+
+      <!-- 카카오 -->
+      <button onclick="socialLogin('kakao')" style="width:100%;height:54px;border-radius:14px;border:none;background:#fee500;color:#3c1e1e;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:inherit" ontouchstart="this.style.opacity='0.85'" ontouchend="this.style.opacity='1'" onmousedown="this.style.opacity='0.85'" onmouseup="this.style.opacity='1'">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 4C7.03 4 3 7.13 3 11c0 2.47 1.56 4.64 3.93 5.9l-.97 3.6 4.2-2.77c.6.08 1.21.13 1.84.13 4.97 0 9-3.13 9-7S16.97 4 12 4z" fill="#3c1e1e"/></svg>
         카카오로 계속하기
       </button>
-      <div class="login-divider"><div class="login-divider-line"></div><span>또는</span><div class="login-divider-line"></div></div>
-      <button class="social-btn btn-email" onclick="showEmail('login')">
-        <div class="s-icon" style="background:var(--bd);border-radius:6px">✉️</div>
-        이메일로 로그인
+
+      <!-- 이메일 -->
+      <button onclick="showEmail('login')" style="width:100%;height:54px;border-radius:14px;border:1px solid #252530;background:#1a1a20;color:#ededf0;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:inherit">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6l-10 7L2 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        이메일로 계속하기
       </button>
-      <button class="login-skip" onclick="skipLogin()">로그인 없이 둘러보기 →</button>
-      <div class="login-terms">계속 진행 시 <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의합니다</div>
+
+      <!-- 구분선 -->
+      <div style="display:flex;align-items:center;gap:12px;margin:2px 0">
+        <div style="flex:1;height:1px;background:#1e1e28"></div>
+        <span style="font-size:11px;color:#3a3a52;font-weight:500">또는</span>
+        <div style="flex:1;height:1px;background:#1e1e28"></div>
+      </div>
+
+      <!-- 둘러보기 -->
+      <button onclick="skipLogin()" style="width:100%;padding:13px;background:none;border:none;color:#505068;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">
+        로그인 없이 둘러보기 →
+      </button>
+
+      <div style="text-align:center;font-size:11px;color:#2e2e42;line-height:1.7;padding-bottom:48px">
+        계속 진행 시 <a href="#" style="color:#505068;text-decoration:underline">이용약관</a> 및 <a href="#" style="color:#505068;text-decoration:underline">개인정보처리방침</a>에 동의합니다
+      </div>
     </div>
   </div>
 
@@ -503,7 +606,7 @@ var sHist=JSON.parse(localStorage.getItem('snr_sh')||'[]');
 var rvId=null,rvRating=0,rvDB=JSON.parse(localStorage.getItem('snr_rv')||'{}');
 var user=JSON.parse(localStorage.getItem('snr_user')||'null');
 var eMode='login';
-var CATS=["전체","뮤지컬","연극","콘서트/페스티벌","클래식/무용","복합","팝업스토어"];
+var CATS=["전체","뮤지컬","콘서트/페스티벌","연극","클래식/무용","복합","팝업스토어"];
 var IC={"전체":"🔥","뮤지컬":"🎭","연극":"🎬","콘서트/페스티벌":"🎤","클래식/무용":"🎻","복합":"✨","팝업스토어":"🏪"};
 var REG=["전국","서울","경기","인천","부산","대구","대전","광주","강원","충청","경상","전라","제주"];
 
@@ -573,7 +676,17 @@ function getCurations(){
 }
 function saveCurations(arr){localStorage.setItem('co_curations',JSON.stringify(arr));}
 var NOW=new Date(),DL=350;NOW.setHours(0,0,0,0);
-var LM={homepage:{label:"홈페이지",icon:"🌐",cls:"ic-web"},instagram:{label:"인스타",icon:"📷",cls:"ic-insta"},ticket:{label:"예매",icon:"🎫",cls:"ic-ticket"},shop:{label:"스토어",icon:"🛒",cls:"ic-shop"}};
+var LM={homepage:{label:"홈페이지",icon:"🌐",cls:"ic-web"},instagram:{label:"인스타",icon:"📷",cls:"ic-insta"},ticket:{label:"예매",icon:"🎫",cls:"ic-ticket"},shop:{label:"스토어",icon:"🛒",cls:"ic-shop"},kopis:{label:"KOPIS",icon:"🎭",cls:"ic-kopis"},naver:{label:"네이버",icon:"🔍",cls:"ic-naver"}};
+
+// KOPIS 공식 링크 자동 생성 (mt20id 기반)
+function getKopisLink(id){
+  if(!id||!id.match(/^PF/i))return null;
+  return'https://www.kopis.or.kr/por/db/pblprfr/pblprfrView.do?menuId=MNU_00010&pblprfrId='+id;
+}
+// 네이버 검색 딥링크
+function getNaverSearchLink(title){
+  return'https://search.naver.com/search.naver?query='+encodeURIComponent(title+' 예매');
+}
 
 function dd(e){return Math.ceil((new Date(e)-NOW)/864e5);}
 function getPoster(e){
@@ -665,49 +778,19 @@ function scDetail(e,allEv){
   return{total:total,s1:s1,s2:s2,s3:s3,s4:s4,s5:s5,s6:s6,s7:s7,d:d,br:br};
 }
 function sc(e,allEv){return scDetail(e,allEv).total;}
-function tc(s,mx){return mx===0?0:Math.round(s/mx*100);}
-function tC(t){if(t>=80)return"#ff5e3a";if(t>=60)return"#ff9500";if(t>=30)return"#4fc3f7";return"#90a4ae";}
-function tB(t){if(t>=80)return"rgba(255,94,58,0.15)";if(t>=60)return"rgba(255,149,0,0.15)";if(t>=30)return"rgba(79,195,247,0.12)";return"rgba(144,164,174,0.12)";}
-function gauge(t,sz){sz=sz||46;var c=tC(t),r=(sz-6)/2,ci=2*Math.PI*r,of=ci-(ci*Math.min(t,100)/100);return'<div class="gauge" style="width:'+sz+'px;height:'+sz+'px"><svg viewBox="0 0 '+sz+' '+sz+'"><circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+r+'" fill="none" stroke="#2a2a38" stroke-width="3"/><circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="'+ci+'" stroke-dashoffset="'+of+'" transform="rotate(-90 '+sz/2+' '+sz/2+')"/></svg><div class="gauge-val"><span class="gauge-num" style="color:'+c+'">'+t+'°</span></div></div>';}
+function tc(s,mx){return s;}  // 원점수 그대로 사용
+function tC(t){if(t>=80)return"#ff5e3a";if(t>=55)return"#ff9500";if(t>=25)return"#4fc3f7";return"#90a4ae";}
+function tB(t){if(t>=80)return"rgba(255,94,58,0.15)";if(t>=55)return"rgba(255,149,0,0.15)";if(t>=25)return"rgba(79,195,247,0.12)";return"rgba(144,164,174,0.12)";}
+var SCORE_MAX=135; // 전체 점수 최대 (40+25+30+10+12+8+20)
+function gauge(t,sz){sz=sz||46;var c=tC(t),pct=Math.min(t/SCORE_MAX*100,100),r=(sz-6)/2,ci=2*Math.PI*r,of=ci-(ci*pct/100);return'<div class="gauge" style="width:'+sz+'px;height:'+sz+'px"><svg viewBox="0 0 '+sz+' '+sz+'"><circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+r+'" fill="none" stroke="#2a2a38" stroke-width="3"/><circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="'+ci+'" stroke-dashoffset="'+of+'" transform="rotate(-90 '+sz/2+' '+sz/2+')"/></svg><div class="gauge-val"><span class="gauge-num" style="color:'+c+'">'+t+'°</span></div></div>';}
 function thermo(t,ev_obj,mx){
   var c=tC(t);
-  var pct=Math.min(t,100);
+  var pct=Math.min(Math.round(t/SCORE_MAX*100),100);
   var ticks='';
   [25,50,75].forEach(function(lv){
     ticks+='<div style="position:absolute;bottom:'+lv+'%;left:0;right:0;height:1px;background:rgba(255,255,255,0.12)"></div>';
   });
-  // 툴팁 — ev_obj가 있을 때만 점수 breakdown 표시
-  var tip='';
-  if(ev_obj){
-    var sd=scDetail(ev_obj,ev);
-    var rows=[
-      {l:'예매순위',v:sd.s2,max:40,hint:sd.br>0?sd.br+'위':'미집계'},
-      {l:'마감 임박',v:sd.s3,max:25,hint:sd.d>=0?'D-'+sd.d:'종료'},
-      {l:'네이버 검색',v:sd.s1,max:30,hint:ev_obj.naver_score||0},
-      {l:'신규 오픈',v:sd.s4,max:10,hint:sd.s4?'7일 이내':''},
-      {l:'희소성(기간)',v:sd.s5,max:12,hint:''},
-      {l:'무료입장',v:sd.s6,max:8,hint:sd.s6?'무료':''},
-      {l:'사용자 반응',v:sd.s7,max:20,hint:'조회/좋아요/저장'},
-    ];
-    tip='<div class="thermo-tip">'
-      +'<div class="thermo-tip-title">온도 점수 breakdown</div>';
-    rows.forEach(function(r){
-      var pct2=r.max?Math.round(r.v/r.max*100):0;
-      tip+='<div class="thermo-tip-row">'
-        +'<span class="thermo-tip-label">'+r.l+'</span>'
-        +'<span class="thermo-tip-val" style="color:'+c+'">'+r.v+'<span style="font-size:9px;color:#505068;font-weight:400">/'+r.max+'</span></span>'
-        +'</div>'
-        +'<div class="thermo-tip-bar"><div class="thermo-tip-fill" style="width:'+pct2+'%;background:'+c+'"></div></div>';
-    });
-    var rawTotal=sd.total;
-    tip+='<div class="thermo-tip-divider"></div>'
-      +'<div class="thermo-tip-row">'
-        +'<span class="thermo-tip-label" style="font-weight:700;color:#ededf0">원점수 합계</span>'
-        +'<span class="thermo-tip-val" style="color:'+c+'">'+rawTotal+'점</span>'
-      +'</div>'
-      +'</div>';
-  }
-  return '<div class="thermo">'+tip+
+  return '<div class="thermo" data-ev-id="'+(ev_obj?ev_obj.id:'')+'" data-thermo-t="'+t+'">'+
     '<div class="thermo-tube">'+ticks+
       '<div class="thermo-mercury" style="height:'+pct+'%;background:linear-gradient(to top,'+c+','+c+'cc)"></div>'+
     '</div>'+
@@ -736,6 +819,14 @@ function go(pg,id){
   if(!el){console.error("page-"+pg+" not found");return;}
   el.classList.add("active");
   curPage=pg;
+  // 로그인 페이지: 앱 내부에서 왔으면 뒤로가기 버튼 표시
+  if(pg==="login"){
+    var backBtn=document.getElementById("loginBackBtn");
+    if(backBtn){
+      var showBack=curNav&&curNav!=="home"&&user===null;
+      backBtn.style.display=showBack?"flex":"none";
+    }
+  }
   var appPages=["home","ranking","calendar","explore","my","detail"];
   document.getElementById("bnav").style.display=(appPages.indexOf(pg)>=0&&pg!=="detail")?"flex":"none";
   window.scrollTo(0,0);
@@ -744,7 +835,11 @@ function go(pg,id){
   else if(pg==="ranking"){showSkl("ranking",sklR);setTimeout(renderRanking,DL);}
   else if(pg==="calendar"){showSkl("calendar",sklC);setTimeout(renderCalendar,DL);}
   else if(pg==="explore"){showSkl("explore",function(){return R(5,function(){return'<div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #21212e"><div style="width:30px;height:30px;border-radius:6px" class="sk"></div><div style="width:50px;height:66px;border-radius:5px" class="sk"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="width:80%;height:14px" class="sk"></div><div style="width:50%;height:12px" class="sk"></div></div></div>';});});setTimeout(renderExplore,DL);}
-  else if(pg==="my"){showSkl("my",sklM);setTimeout(renderMy,DL);}
+  else if(pg==="my"){
+    // 비로그인이면 로그인 페이지로
+    if(!user){go('login');return;}
+    showSkl("my",sklM);setTimeout(renderMy,DL);
+  }
   else if(pg==="detail"){showSkl("detail",sklD);setTimeout(function(){renderDetail(id);},DL);}
   else if(pg==="tag"){showSkl("tag",function(){return R(6,function(){return'<div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #21212e"><div style="width:50px;height:66px;border-radius:5px" class="sk"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="width:80%;height:14px" class="sk"></div><div style="width:50%;height:12px" class="sk"></div></div><div style="width:46px;height:46px;border-radius:50%" class="sk"></div></div>';});});setTimeout(function(){renderTagPage(id);},DL);}
 }
@@ -755,7 +850,18 @@ function socialLogin(p){
   var u={naver:"네이버 유저",kakao:"카카오 유저"}[p];
   loginOK({name:u,email:"user@"+p+".com",provider:p,avatar:u.charAt(0)});
 }
-function loginOK(u){user=u;localStorage.setItem('snr_user',JSON.stringify(u));initApp();}
+function loginOK(u){
+  user=u;
+  localStorage.setItem('snr_user',JSON.stringify(u));
+  // 로그인 후 MY 탭으로 이동
+  renderNav();
+  document.getElementById("bnav").style.display="flex";
+  if(!ev||!ev.length){
+    loadEvents(function(data){ev=data;curNav="my";go("my");});
+  } else {
+    curNav="my";go("my");
+  }
+}
 function skipLogin(){initApp();}
 function initApp(){
   renderNav();
@@ -918,7 +1024,7 @@ function renderHome(){
   h+='<div class="h-scroll">'+hot5.map(function(e){var t=tc(e._s,mx),c=tC(t);return'<div class="h-card" onclick="viewEv(\''+e.id+'\')">'+hThumb(e,'<div class="h-card-temp" style="background:'+tB(t)+';color:'+c+'">'+t+'°C</div>')+'<div class="h-card-title">'+e.t+'</div><div class="h-card-sub">'+e.ct+' · '+e.lo+'</div><div class="h-card-date">'+fmtRange(e.sd,e.ed)+'</div></div>';}).join('')+'</div>';
   if(closing.length){h+='<div style="padding:0 20px;margin-bottom:12px"><div style="font-size:15px;font-weight:800">곧 종료</div></div><div class="dl-list">';closing.forEach(function(e){h+='<div class="dl-item" onclick="viewEv(\''+e.id+'\')"><div class="dl-thumb" style="'+(getPoster(e)?'background-image:url('+getPoster(e)+');background-size:cover;background-position:center top;font-size:0':'')+'">'+(!getPoster(e)?IC[e.ct]:'')+' </div><div class="dl-info"><div class="dl-title">'+e.t+'</div><div class="dl-meta">'+e.lo+' · '+fmtRange(e.sd,e.ed)+'</div></div><div class="dl-dday">D-'+dd(e.ed)+'</div></div>';});h+='</div>';}
   if(upcoming.length){h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px;margin-bottom:12px;margin-top:4px"><div style="font-size:15px;font-weight:800">오픈 예정</div></div><div class="h-scroll">'+upcoming.map(function(e){var s=dd(e.sd);return'<div class="h-card" onclick="viewEv(\''+e.id+'\')">'+hThumb(e,'<div class="h-card-temp" style="background:rgba(79,195,247,0.15);color:#4fc3f7">D-'+Math.max(s,0)+'</div>')+'<div class="h-card-title">'+e.t+'</div><div class="h-card-sub">'+e.ct+' · '+e.lo+'</div><div class="h-card-date">'+fmtRange(e.sd,e.ed)+'</div></div>';}).join('')+'</div>';}
-  document.getElementById("page-home").innerHTML=h+'<div class="kopis-credit">출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</div>';
+  document.getElementById("page-home").innerHTML=h+'<div class="credit-block"><div class="credit-row"><a href="https://www.kopis.or.kr" target="_blank" rel="noopener" class="kopis-credit-link"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke-linecap="round" stroke-linejoin="round"/></svg>공연예술통합전산망 KOPIS</a><div class="credit-divider"></div><a href="https://developers.naver.com" target="_blank" rel="noopener" class="naver-credit"><span class="naver-credit-powered">Powered by</span><span class="naver-credit-n">&nbsp;NAVER</span><span class="naver-credit-api">&nbsp;OpenAPI</span></a></div></div>';
   });}
 function goSlide(i){sIdx=i;var tr=document.getElementById("heroTrack");if(!tr)return;tr.style.transform="translateX(-"+(i*100)+"%)";document.querySelectorAll(".hero-dot").forEach(function(d,j){d.classList.toggle("on",j===i);});}
 
@@ -951,14 +1057,20 @@ function renderRanking(){
   loadEvents(function(data){ev=data;
   // 팝업스토어 준비중
   if(cCat==="팝업스토어"){
-    var h='<div class="rk-hdr"><div class="rk-title">컬처온도 랭킹</div></div>';
+    var regionActive=cRegion!=="전국";
+    var h='<div class="hdr"><h1>컬처온도 랭킹</h1></div>';
     h+='<div class="rk-cat-tabs">'+CATS.map(function(c){return'<button class="rk-cat-tab'+(cCat===c?' on':'')+'\" onclick="cCat=\''+c+'\';renderRanking()">'+c+(c==="팝업스토어"?' 🔜':'')+'</button>';}).join('')+'</div>';
-    h+='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:50vh;gap:16px">';
-    h+='<div style="font-size:48px">🏪</div>';
-    h+='<div style="font-size:18px;font-weight:800;color:var(--tx)">팝업스토어</div>';
-    h+='<div style="font-size:14px;color:var(--sub);text-align:center;line-height:1.6">팝업스토어 데이터를 준비 중이에요.<br>곧 만나보실 수 있어요!</div>';
+    h+='<div class="rk-ctrl-bar">';
+    h+='<div class="rk-period-tabs">'+["일간","주간","월간"].map(function(p){return'<button class="rk-period-tab'+(cPd===p?' on':'')+'\" onclick="cPd=\''+p+'\';renderRanking()">'+p+'</button>';}).join('')+'</div>';
+    h+='<button class="rk-region-btn'+(regionActive?' active':'')+'\" onclick="openRegionSheet()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>'+(regionActive?cRegion:'지역별')+'<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
     h+='</div>';
-    document.getElementById("page-ranking").innerHTML=h+'<div class="kopis-credit">출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</div>';
+    h+='<div class="meta-bar">'+pdLabel()+' · '+(regionActive?cRegion:'전국')+'</div>';
+    h+='<div class="empty" style="padding:60px 20px">'
+      +'<div style="font-size:48px;margin-bottom:16px">🏪</div>'
+      +'<div style="font-size:17px;font-weight:800;color:var(--tx);margin-bottom:8px">팝업스토어</div>'
+      +'<div style="font-size:13.5px;color:var(--sub);line-height:1.7">팝업스토어 데이터를 준비 중이에요.<br>곧 만나보실 수 있어요!</div>'
+    +'</div>';
+    document.getElementById("page-ranking").innerHTML=h+'<div class="credit-block"><div class="credit-row"><a href="https://www.kopis.or.kr" target="_blank" rel="noopener" class="kopis-credit-link"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke-linecap="round" stroke-linejoin="round"/></svg>공연예술통합전산망 KOPIS</a><div class="credit-divider"></div><a href="https://developers.naver.com" target="_blank" rel="noopener" class="naver-credit"><span class="naver-credit-powered">Powered by</span><span class="naver-credit-n">&nbsp;NAVER</span><span class="naver-credit-api">&nbsp;OpenAPI</span></a></div></div>';
     return;
   }
   // 기간 필터 — 해당 범위 내에 공연이 진행 중인 것만
@@ -967,7 +1079,6 @@ function renderRanking(){
     if(e.st==="ended")return false;
     if(cCat!=="전체"&&e.ct!==cCat)return false;
     if(cRegion!=="전국"&&gr(e)!==cRegion)return false;
-    // 기간 필터: 공연 기간이 선택 범위와 겹치는지
     if(e.sd&&e.ed){
       var esd=new Date(e.sd),eed=new Date(e.ed);
       if(eed<rng.s||esd>rng.e)return false;
@@ -975,21 +1086,33 @@ function renderRanking(){
     return true;
   }).sort(function(a,b){return b._s-a._s;});
   var mx=list.length?list[0]._s:1;
+
+  // ── 순위 변동: API에서 받은 prev_rank 사용 (서버 사이드 스냅샷) ──
   var regionActive=cRegion!=="전국";
-  // 카테고리 탭
   var h='<div class="hdr"><h1>컬처온도 랭킹</h1></div>';
   h+='<div class="rk-cat-tabs">'+CATS.map(function(c){return'<button class="rk-cat-tab'+(cCat===c?' on':'')+'\" onclick="cCat=\''+c+'\';renderRanking()">'+c+(c==="팝업스토어"?' 🔜':'')+'</button>';}).join('')+'</div>';
-  // 기간 탭 + 지역 필터 버튼
   h+='<div class="rk-ctrl-bar">';
   h+='<div class="rk-period-tabs">'+["일간","주간","월간"].map(function(p){return'<button class="rk-period-tab'+(cPd===p?' on':'')+'\" onclick="cPd=\''+p+'\';renderRanking()">'+p+'</button>';}).join('')+'</div>';
   h+='<button class="rk-region-btn'+(regionActive?' active':'')+'\" onclick="openRegionSheet()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>'+(regionActive?cRegion:'지역별')+'<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
   h+='</div>';
-  // 기준 정보 — 동적 날짜
   h+='<div class="meta-bar">'+pdLabel()+' · '+(regionActive?cRegion:'전국')+' · '+list.length+'건</div>';
-  // 리스트
   if(!list.length){h+='<div class="empty"><div style="font-size:36px;margin-bottom:12px">🏪</div><p>이벤트가 없어요</p></div>';}
-  else{list.slice(0,100).forEach(function(e,i){var rk=i+1,df=e.pk-rk,t=tc(e._s,mx),cc=df>0?'up':df<0?'dn':'sm',ct=df>0?df+'▲':df<0?Math.abs(df)+'▼':'—';h+='<div class="rk" onclick="viewEv(\''+e.id+'\')" style="animation:si 0.3s ease '+(i*0.04)+'s both"><div class="rk-n"><div class="rk-n-v">'+rk+'</div><div class="rk-ch '+cc+'">'+ct+'</div></div>'+rkThumb(e)+'<div class="rk-info"><div class="rk-title">'+e.t+'</div><div class="rk-sub"><div class="rk-sub-loc">'+e.ct+' · '+gr(e)+'</div><div class="rk-sub-date">'+e.lo+' · '+fmtRange(e.sd,e.ed)+'</div></div></div>'+thermo(t,e,mx)+'</div>';});}
-  document.getElementById("page-ranking").innerHTML=h+'<div class="kopis-credit">출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</div>';
+  else{list.slice(0,100).forEach(function(e,i){
+    var rk=i+1;
+    var prev=e.prev_rank!=null?Number(e.prev_rank):null;
+    var df=prev!=null?prev-rk:null;
+    var cc=df==null?'new-entry':df>0?'up':df<0?'dn':'sm';
+    var ct=df==null?'NEW':df>0?df+'▲':df<0?Math.abs(df)+'▼':'—';
+    var t=tc(e._s,mx);
+    h+='<div class="rk" onclick="viewEv(\''+e.id+'\')" style="animation:si 0.3s ease '+(i*0.04)+'s both">'
+      +'<div class="rk-n"><div class="rk-n-v">'+rk+'</div><div class="rk-ch '+cc+'">'+ct+'</div></div>'
+      +rkThumb(e)
+      +'<div class="rk-info"><div class="rk-title">'+e.t+'</div>'
+      +'<div class="rk-sub"><div class="rk-sub-loc">'+e.ct+' · '+gr(e)+'</div>'
+      +'<div class="rk-sub-date">'+e.lo+' · '+fmtRange(e.sd,e.ed)+'</div></div></div>'
+      +thermo(t,e,mx)+'</div>';
+  });}
+  document.getElementById("page-ranking").innerHTML=h+'<div class="credit-block"><div class="credit-row"><a href="https://www.kopis.or.kr" target="_blank" rel="noopener" class="kopis-credit-link"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke-linecap="round" stroke-linejoin="round"/></svg>공연예술통합전산망 KOPIS</a><div class="credit-divider"></div><a href="https://developers.naver.com" target="_blank" rel="noopener" class="naver-credit"><span class="naver-credit-powered">Powered by</span><span class="naver-credit-n">&nbsp;NAVER</span><span class="naver-credit-api">&nbsp;OpenAPI</span></a></div></div>';
   });}
 function openRegionSheet(){document.getElementById("regionSheet").classList.add("show");}
 function closeRegionSheet(){document.getElementById("regionSheet").classList.remove("show");}
@@ -1004,51 +1127,345 @@ function selectRegion(r){
 /* 캘린더 */
 function renderCalendar(){
   curNav="calendar";
-  var yr=calYear,mo=calMonth,fd=new Date(yr,mo,1).getDay(),dm=new Date(yr,mo+1,0).getDate(),pd=new Date(yr,mo,0).getDate();
+  loadEvents(function(data){ev=data;
+  // ── 실제 오늘 날짜 기준 ──
+  var realToday=new Date();
+  realToday.setHours(0,0,0,0);
+  var todayY=realToday.getFullYear(),todayM=realToday.getMonth(),todayD=realToday.getDate();
+  // 초기 진입 시 현재 달로 맞추기
+  if(calYear===new Date().getFullYear()&&calMonth===new Date().getMonth()&&calSel===null){
+    calSel=todayD;
+  }
+  var yr=calYear,mo=calMonth;
+  var fd=new Date(yr,mo,1).getDay(),dm=new Date(yr,mo+1,0).getDate(),pd=new Date(yr,mo,0).getDate();
   var cc={"뮤지컬":"#bf5af2","연극":"#ffd60a","콘서트/페스티벌":"#ff5e3a","클래식/무용":"#4fc3f7","복합":"#30d158","팝업스토어":"#ff9500"};
   var mn=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-  function eod(d){var dt=new Date(yr,mo,d);return ev.filter(function(e){var s=new Date(e.sd),en=new Date(e.ed);return dt>=new Date(s.getFullYear(),s.getMonth(),s.getDate())&&dt<=new Date(en.getFullYear(),en.getMonth(),en.getDate());});}
+
+  function eod(d){
+    var dt=new Date(yr,mo,d);
+    dt.setHours(0,0,0,0);
+    return ev.filter(function(e){
+      if(!e.sd||!e.ed)return false;
+      var s=new Date(e.sd);s.setHours(0,0,0,0);
+      var en=new Date(e.ed);en.setHours(0,0,0,0);
+      return dt>=s&&dt<=en;
+    });
+  }
+
   var h='<div class="hdr"><h1 style="font-size:17px">캘린더</h1></div>';
-  h+='<div class="cal-nav"><button onclick="calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar()">‹</button><div class="cal-month">'+yr+'년 '+mn[mo]+'</div><button onclick="calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar()">›</button></div>';
+  h+='<div class="cal-nav">'
+    +'<button onclick="calMonth--;if(calMonth<0){calMonth=11;calYear--;}calSel=null;renderCalendar()">‹</button>'
+    +'<div class="cal-month">'+yr+'년 '+mn[mo]+'</div>'
+    +'<button onclick="calMonth++;if(calMonth>11){calMonth=0;calYear++;}calSel=null;renderCalendar()">›</button>'
+  +'</div>';
+
+  // ── 요일 헤더 ──
   h+='<div class="cal-grid">';
-  ["일","월","화","수","목","금","토"].forEach(function(d,i){h+='<div class="cal-dow" style="'+(i===0?'color:#ff5e3a':i===6?'color:#4fc3f7':'')+'">'+d+'</div>';});
-  for(var i=fd-1;i>=0;i--){h+='<div class="cal-day other"><div class="cal-d">'+(pd-i)+'</div></div>';}
-  var td=(yr===2026&&mo===3)?5:0;
-  for(var d=1;d<=dm;d++){var de=eod(d),it=d===td,is=calSel===d;h+='<div class="cal-day'+(it?' today':'')+(is?' sel':'')+'\" onclick="calSel='+d+';renderCalendar()" style="'+(is?'background:var(--sf)':'')+'"><div class="cal-d">'+d+'</div>';if(de.length)h+='<div class="cal-dots">'+de.slice(0,3).map(function(e){return'<div class="cal-dot" style="background:'+(cc[e.ct]||'#8d8da0')+'"></div>';}).join('')+'</div>';h+='</div>';}
-  var rem=(7-(fd+dm)%7)%7;for(var i=1;i<=rem;i++){h+='<div class="cal-day other"><div class="cal-d">'+i+'</div></div>';}
+  ["일","월","화","수","목","금","토"].forEach(function(d,i){
+    h+='<div class="cal-dow" style="'+(i===0?'color:#ff5e3a':i===6?'color:#4fc3f7':'')+'">'+d+'</div>';
+  });
+
+  // ── 이전달 빈 날 ──
+  for(var i=fd-1;i>=0;i--){
+    h+='<div class="cal-day other"><div class="cal-d">'+(pd-i)+'</div></div>';
+  }
+
+  // ── 이번달 날짜 ──
+  var selD=calSel||todayD;
+  for(var d=1;d<=dm;d++){
+    var de=eod(d);
+    var isToday=(yr===todayY&&mo===todayM&&d===todayD);
+    var isSel=d===selD;
+    var hasBm=de.some(function(e){return bookmarked.has(e.id);});
+
+    h+='<div class="cal-day'+(isToday?' today':'')+(isSel&&!isToday?' sel':'')+'" onclick="calSel='+d+';renderCalendar()" style="'+(isSel&&!isToday?'background:rgba(255,255,255,0.05);border-radius:10px':'')+(isToday?'':'')+'cursor:pointer">';
+    h+='<div class="cal-d">'+d+'</div>';
+
+    if(de.length){
+      h+='<div class="cal-dots" style="gap:2px;justify-content:center;align-items:center">';
+      // 저장한 이벤트 있으면 별표 먼저
+      if(hasBm){
+        h+='<span style="font-size:7px;color:#ffd60a;line-height:1">★</span>';
+      }
+      // 카테고리 점 (최대 2개, 저장표시 있으면 1개)
+      var maxDots=hasBm?2:3;
+      de.filter(function(e){return!bookmarked.has(e.id);}).slice(0,maxDots).forEach(function(e){
+        h+='<div class="cal-dot" style="background:'+(cc[e.ct]||'#8d8da0')+'"></div>';
+      });
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+
+  // ── 다음달 빈 날 ──
+  var rem=(7-(fd+dm)%7)%7;
+  for(var i=1;i<=rem;i++){
+    h+='<div class="cal-day other"><div class="cal-d">'+i+'</div></div>';
+  }
   h+='</div>';
-  var sd=calSel||td||1,de=eod(sd);
-  h+='<div class="cal-events"><div class="cal-date-hdr"><span style="color:#ff5e3a">●</span> '+yr+'.'+String(mo+1).padStart(2,'0')+'.'+String(sd).padStart(2,'0')+' '+(de.length?'('+de.length+'건)':'')+'</div>';
-  if(!de.length){h+='<div style="text-align:center;padding:30px 0;color:#505068;font-size:13px">이 날은 예정된 이벤트가 없어요</div>';}
-  else{de.forEach(function(e){h+='<div class="cal-ev" onclick="viewEv(\''+e.id+'\')"><div class="cal-ev-thumb">'+IC[e.ct]+'</div><div class="cal-ev-info"><div class="cal-ev-title">'+e.t+'</div><div class="cal-ev-meta">'+e.lo+' · '+fmtRange(e.sd,e.ed)+'</div></div><div class="cal-ev-cat">'+e.ct+'</div></div>';});}
+
+  // ── 선택된 날 이벤트 목록 ──
+  var de=eod(selD);
+  // 저장한 이벤트 최상단 정렬
+  var bmList=de.filter(function(e){return bookmarked.has(e.id);});
+  var restList=de.filter(function(e){return!bookmarked.has(e.id);});
+  var sortedDe=bmList.concat(restList);
+
+  var dateLabel=yr+'.'+String(mo+1).padStart(2,'0')+'.'+String(selD).padStart(2,'0');
+  var isTodaySel=(yr===todayY&&mo===todayM&&selD===todayD);
+
+  h+='<div class="cal-events">';
+  h+='<div class="cal-date-hdr">'
+    +'<span style="color:'+(isTodaySel?'#ff5e3a':'#8d8da0')+'">●</span> '
+    +dateLabel
+    +(isTodaySel?' <span style="font-size:11px;font-weight:700;color:#ff5e3a;background:rgba(255,94,58,0.12);padding:2px 7px;border-radius:6px;margin-left:4px">오늘</span>':'')
+    +(sortedDe.length?' <span style="font-size:12px;color:var(--mu);font-weight:500">('+sortedDe.length+'건)</span>':'')
+  +'</div>';
+
+  if(!sortedDe.length){
+    h+='<div style="text-align:center;padding:36px 0;color:#505068;font-size:13px">이 날은 예정된 이벤트가 없어요</div>';
+  } else {
+    sortedDe.forEach(function(e){
+      var isBm=bookmarked.has(e.id);
+      var p=getPoster(e);
+      h+='<div class="cal-ev" onclick="viewEv(\''+e.id+'\')" style="'+(isBm?'background:rgba(255,214,10,0.04);border-left:2px solid #ffd60a;padding-left:10px;margin-left:-2px':'border-left:2px solid transparent;padding-left:10px;margin-left:-2px')+'">'
+        +'<div class="cal-ev-thumb" style="'+(p?'background-image:url('+p+');background-size:cover;background-position:center top;font-size:0':'')+'">'+(!p?IC[e.ct]:'')+'</div>'
+        +'<div class="cal-ev-info">'
+          +'<div class="cal-ev-title" style="display:flex;align-items:center;gap:5px">'
+            +(isBm?'<span style="font-size:11px;color:#ffd60a">★</span>':'')
+            +e.t
+          +'</div>'
+          +'<div class="cal-ev-meta">'+e.lo+' · '+fmtRange(e.sd,e.ed)+'</div>'
+        +'</div>'
+        +'<div class="cal-ev-cat">'+e.ct+'</div>'
+      +'</div>';
+    });
+  }
   h+='</div>';
   document.getElementById("page-calendar").innerHTML=h;
+  });
 }
 
 /* 탐색 */
 function renderExplore(){
   curNav="explore";
-  var tr=ev.filter(function(e){return e.st!=="ended";}).sort(function(a,b){return b.lc-a.lc;}).slice(0,5).map(function(e){return{word:e.t.split(" ")[0].replace(/[()]/g,""),change:Math.floor(Math.random()*5)-2};});
-  var h='<div class="hdr"><h1>🔍 탐색</h1></div><div style="padding:14px 20px 10px"><div style="display:flex;align-items:center;gap:10px;background:#1a1a20;border:1px solid #2a2a38;border-radius:12px;padding:12px 14px;cursor:pointer" onclick="openSearch()"><svg width="18" height="18" fill="none" stroke="#505068" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:14px;color:#505068">이벤트, 장소, 태그 검색...</span></div></div>';
-  h+='<div class="s-section"><div class="s-sec-title">인기 검색어</div>';
-  tr.forEach(function(t,i){h+='<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #21212e;cursor:pointer" onclick="openSearch(\''+t.word+'\')"><div style="width:22px;font-size:14px;font-weight:800;text-align:center;'+(i<3?'color:#ff5e3a':'')+'\">'+(i+1)+'</div><div style="flex:1;font-size:13.5px;font-weight:500">'+t.word+'</div><div style="font-size:11px;font-weight:700;color:'+(t.change>0?'#ff5e3a':t.change<0?'#4fc3f7':'#505068')+'">'+(t.change>0?'▲'+t.change:t.change<0?'▼'+Math.abs(t.change):'—')+'</div></div>';});
-  h+='</div><div class="s-section" style="border-top:1px solid #21212e"><div class="s-sec-title">카테고리</div><div class="s-tags">'+CATS.filter(function(c){return c!=='전체';}).map(function(c){return'<button class="s-tag" onclick="cCat=\''+c+'\';go(\'ranking\')">'+IC[c]+' '+c+'</button>';}).join('')+'</div></div>';
-  document.getElementById("page-explore").innerHTML=h+'<div class="kopis-credit">출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</div>';
+  loadEvents(function(data){ev=data;
+  var all=ev.filter(function(e){return e.st!=="ended";});
+  var scored=all.map(function(e){return Object.assign({},e,{_s:sc(e,ev)});}).sort(function(a,b){return b._s-a._s;});
+  // 인기 검색어: 점수 상위에서 공연명 첫 단어 추출
+  var tr=scored.slice(0,10).map(function(e,i){
+    var prev=e.prev_rank!=null?Number(e.prev_rank):null;
+    var rank=i+1;
+    var df=prev!=null?prev-rank:null;
+    return{word:e.t.length>12?e.t.slice(0,12)+'…':e.t,change:df,isNew:df===null,id:e.id};
+  });
+  // 카테고리별 건수
+  var catCnt={};
+  CATS.forEach(function(c){catCnt[c]=all.filter(function(e){return c==="전체"||e.ct===c;}).length;});
+  // 지역별 건수
+  var regCnt={};
+  REG.forEach(function(r){regCnt[r]=all.filter(function(e){return r==="전국"||gr(e)===r;}).length;});
+  // 무료 이벤트
+  var freeList=scored.filter(function(e){return Number(e.fr)===1;}).slice(0,4);
+  // 신규 오픈
+  var newList=scored.filter(function(e){
+    if(!e.ca)return false;
+    var a=Math.ceil((NOW-new Date(e.ca))/864e5);
+    return a>=0&&a<=7;
+  }).slice(0,4);
+
+  var h='<div style="padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between">'
+    +'<h1 style="font-size:18px;font-weight:800">탐색</h1>'
+    +'</div>';
+
+  // 검색바
+  h+='<div style="padding:0 20px 16px"><div style="display:flex;align-items:center;gap:10px;background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;cursor:pointer" onclick="openSearch()">'
+    +'<svg width="17" height="17" fill="none" stroke="#505068" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    +'<span style="font-size:14px;color:#505068">이벤트, 장소, 태그 검색...</span>'
+    +'</div></div>';
+
+  // 인기 랭킹
+  h+='<div style="padding:0 20px;margin-bottom:20px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">🔥 실시간 인기</div>';
+  tr.forEach(function(t,i){
+    var rk=i+1;
+    var chHtml=t.isNew
+      ?'<span style="font-size:9px;font-weight:700;color:#bf5af2;background:rgba(191,90,242,0.12);padding:2px 5px;border-radius:4px">NEW</span>'
+      :t.change>0
+        ?'<span style="font-size:10px;font-weight:700;color:#ff5e3a">▲'+t.change+'</span>'
+        :t.change<0
+          ?'<span style="font-size:10px;font-weight:700;color:#4fc3f7">▼'+Math.abs(t.change)+'</span>'
+          :'<span style="font-size:10px;color:#505068">—</span>';
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bdL);cursor:pointer" onclick="viewEv(\''+t.id+'\')">'
+      +'<div style="width:24px;font-size:14px;font-weight:900;text-align:center;color:'+(rk<=3?'#ff5e3a':'#505068')+'">'+rk+'</div>'
+      +'<div style="flex:1;font-size:13.5px;font-weight:600">'+t.word+'</div>'
+      +chHtml
+      +'</div>';
+  });
+  h+='</div>';
+
+  // 카테고리
+  h+='<div style="padding:0 20px;margin-bottom:20px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">장르별</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
+  CATS.filter(function(c){return c!=='전체';}).forEach(function(c){
+    h+='<div style="padding:12px 8px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);text-align:center;cursor:pointer;transition:all 0.15s" onclick="cCat=\''+c+'\';go(\'ranking\')">'
+      +'<div style="font-size:22px;margin-bottom:4px">'+IC[c]+'</div>'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:2px">'+c+'</div>'
+      +'<div style="font-size:10px;color:var(--mu)">'+catCnt[c]+'건</div>'
+      +'</div>';
+  });
+  h+='</div></div>';
+
+  // 지역별
+  h+='<div style="padding:0 20px;margin-bottom:20px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">지역별</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
+  REG.filter(function(r){return r!=='전국';}).forEach(function(r){
+    h+='<div style="padding:9px 4px;border-radius:10px;border:1.5px solid var(--bd);background:var(--card);text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:var(--sub);transition:all 0.15s" onclick="cRegion=\''+r+'\';go(\'ranking\')">'+r+'<div style="font-size:9px;color:var(--mu);margin-top:2px">'+regCnt[r]+'건</div></div>';
+  });
+  h+='</div></div>';
+
+  // 무료 이벤트
+  if(freeList.length){
+    h+='<div style="padding:0 20px;margin-bottom:20px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.05em">🎟️ 무료 입장</div>'
+      +'<button style="font-size:11px;color:#505068;font-weight:500;background:none;border:none;cursor:pointer" onclick="goTag(\'keyword\',\'무료입장\')">전체보기 ›</button>'
+      +'</div>';
+    freeList.forEach(function(e){
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdL);cursor:pointer" onclick="viewEv(\''+e.id+'\')">'
+        +'<div style="width:44px;height:44px;border-radius:8px;flex-shrink:0;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:20px;'+(getPoster(e)?'background-image:url('+getPoster(e)+');background-size:cover;background-position:center top;font-size:0':'')+'">'+(!getPoster(e)?IC[e.ct]:'')+'</div>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+e.t+'</div>'
+        +'<div style="font-size:11px;color:var(--sub);margin-top:2px">'+e.lo+' · '+fmtRange(e.sd,e.ed)+'</div></div>'
+        +'<span style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(46,204,113,0.12);color:#2ecc71;flex-shrink:0">무료</span>'
+        +'</div>';
+    });
+    h+='</div>';
+  }
+
+  // 신규 오픈
+  if(newList.length){
+    h+='<div style="padding:0 20px;margin-bottom:20px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">✨ 신규 오픈</div>';
+    newList.forEach(function(e){
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdL);cursor:pointer" onclick="viewEv(\''+e.id+'\')">'
+        +'<div style="width:44px;height:44px;border-radius:8px;flex-shrink:0;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:20px;'+(getPoster(e)?'background-image:url('+getPoster(e)+');background-size:cover;background-position:center top;font-size:0':'')+'">'+(!getPoster(e)?IC[e.ct]:'')+'</div>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+e.t+'</div>'
+        +'<div style="font-size:11px;color:var(--sub);margin-top:2px">'+e.ct+' · '+fmtRange(e.sd,e.ed)+'</div></div>'
+        +'<span style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(191,90,242,0.12);color:#bf5af2;flex-shrink:0">NEW</span>'
+        +'</div>';
+    });
+    h+='</div>';
+  }
+
+  document.getElementById("page-explore").innerHTML=h+'<div class="credit-block"><div class="credit-row"><a href="https://www.kopis.or.kr" target="_blank" rel="noopener" class="kopis-credit-link"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke-linecap="round" stroke-linejoin="round"/></svg>공연예술통합전산망 KOPIS</a><div class="credit-divider"></div><a href="https://developers.naver.com" target="_blank" rel="noopener" class="naver-credit"><span class="naver-credit-powered">Powered by</span><span class="naver-credit-n">&nbsp;NAVER</span><span class="naver-credit-api">&nbsp;OpenAPI</span></a></div></div>';
+  });
 }
 
 /* 마이페이지 */
 function renderMy(){
   curNav="my";
-  var bm=ev.filter(function(e){return bookmarked.has(e.id);}),lk=ev.filter(function(e){return liked.has(e.id);});
+  loadEvents(function(data){ev=data;
+  var bm=ev.filter(function(e){return bookmarked.has(e.id);});
+  var lk=ev.filter(function(e){return liked.has(e.id);});
   var list=myTab==="bookmark"?bm:lk;
-  var h='<div class="my-hdr"><h1>마이페이지</h1></div>';
-  if(user){h+='<div style="display:flex;align-items:center;gap:14px;padding:0 20px 20px"><div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#ff5e3a,#ff9500);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff">'+user.avatar+'</div><div><div style="font-size:16px;font-weight:800">'+user.name+'</div><div style="font-size:12px;color:#8d8da0;margin-top:2px">'+user.email+'</div><div style="font-size:10.5px;color:#505068;margin-top:3px">'+({naver:'🟢 네이버',kakao:'💛 카카오',email:'✉️ 이메일'}[user.provider]||user.provider)+' 로그인</div></div><button onclick="logout()" style="margin-left:auto;padding:7px 12px;border-radius:8px;border:1px solid #2a2a38;background:#1a1a20;color:#8d8da0;font-size:12px;font-weight:600;cursor:pointer">로그아웃</button></div>';}
-  else{h+='<div style="padding:0 20px 16px"><div style="background:#1a1a20;border:1px solid #2a2a38;border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:14px;font-weight:700;margin-bottom:4px">로그인하고 더 많이 즐기세요</div><div style="font-size:12px;color:#8d8da0">저장한 이벤트를 모든 기기에서</div></div><button onclick="go(\'login\')" style="padding:9px 16px;border-radius:9px;border:none;background:#ff5e3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer">로그인</button></div></div>';}
-  h+='<div class="my-stats"><div class="my-stat"><div class="my-stat-v">'+bm.length+'</div><div class="my-stat-l">저장</div></div><div class="my-stat"><div class="my-stat-v">'+lk.length+'</div><div class="my-stat-l">좋아요</div></div></div>';
-  h+='<div class="my-tabs"><button class="my-tab'+(myTab==="bookmark"?" on":"")+'\" onclick="myTab=\'bookmark\';renderMy()">저장한 이벤트</button><button class="my-tab'+(myTab==="like"?" on":"")+'\" onclick="myTab=\'like\';renderMy()">좋아요</button></div>';
-  if(!list.length){h+='<div class="empty"><div style="font-size:48px;margin:20px 0 14px">'+(myTab==="bookmark"?"📌":"🤍")+'</div><p style="font-size:14px;font-weight:600;margin-bottom:6px;color:#8d8da0">'+(myTab==="bookmark"?"저장한 이벤트가 없어요":"좋아요한 이벤트가 없어요")+'</p></div>';}
-  else{var all=ev.map(function(x){return Object.assign({},x,{_s:sc(x)});}).sort(function(a,b){return b._s-a._s;});var mx=all.length?all[0]._s:1;list.forEach(function(e,i){var t=tc(sc(e),mx);h+='<div class="rk" onclick="viewEv(\''+e.id+'\')" style="animation:si 0.3s ease '+(i*0.04)+'s both">'+rkThumb(e)+'<div class="rk-info"><div class="rk-title">'+e.t+'</div><div class="rk-sub"><div class="rk-sub-loc">'+e.ct+' · '+e.lo+'</div><div class="rk-sub-date">'+fmtRange(e.sd,e.ed)+'</div></div></div>'+gauge(t,44)+'</div>';});}
-  document.getElementById("page-my").innerHTML=h+'<div class="kopis-credit">출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</div>';
+  var all=ev.map(function(x){return Object.assign({},x,{_s:sc(x)});}).sort(function(a,b){return b._s-a._s;});
+  var mx=all.length?all[0]._s:1;
+
+  var h='';
+
+  // ── 헤더 ──
+  h+='<div style="padding:14px 20px 0;display:flex;align-items:center;justify-content:space-between">'
+    +'<h1 style="font-size:18px;font-weight:800">MY</h1>'
+    +'<button onclick="logout()" style="padding:6px 13px;border-radius:9px;border:1px solid var(--bd);background:none;color:var(--mu);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">로그아웃</button>'
+  +'</div>';
+
+  // ── 프로필 ──
+  var provColor={naver:'#03c75a',kakao:'#fee500',email:'#8d8da0'};
+  var provLabel={naver:'네이버',kakao:'카카오',email:'이메일'};
+  h+='<div style="display:flex;align-items:center;gap:14px;padding:14px 20px 20px">'
+    +'<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#ff5e3a,#ff9500);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0">'+user.avatar+'</div>'
+    +'<div>'
+      +'<div style="font-size:15px;font-weight:800">'+user.name+'</div>'
+      +'<div style="display:flex;align-items:center;gap:5px;margin-top:4px">'
+        +'<div style="width:6px;height:6px;border-radius:50%;background:'+(provColor[user.provider]||'#8d8da0')+'"></div>'
+        +'<span style="font-size:11px;color:var(--mu);font-weight:600">'+(provLabel[user.provider]||user.provider)+' 로그인</span>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+
+  // ── 통계 바 ──
+  h+='<div style="display:flex;gap:1px;margin:0 20px 20px;background:var(--bd);border-radius:12px;overflow:hidden;border:1px solid var(--bd)">'
+    +'<div style="flex:1;padding:13px 0;text-align:center;background:var(--sf);cursor:pointer" onclick="myTab=\'bookmark\';renderMy()">'
+      +'<div style="font-size:20px;font-weight:900;color:var(--hot)">'+bm.length+'</div>'
+      +'<div style="font-size:10px;color:var(--mu);font-weight:600;margin-top:2px">저장</div>'
+    +'</div>'
+    +'<div style="flex:1;padding:13px 0;text-align:center;background:var(--sf);cursor:pointer" onclick="myTab=\'like\';renderMy()">'
+      +'<div style="font-size:20px;font-weight:900;color:var(--hot)">'+lk.length+'</div>'
+      +'<div style="font-size:10px;color:var(--mu);font-weight:600;margin-top:2px">좋아요</div>'
+    +'</div>'
+    +'<div style="flex:1;padding:13px 0;text-align:center;background:var(--sf)">'
+      +'<div style="font-size:20px;font-weight:900;color:var(--hot)">'+(Object.keys(rvDB).length)+'</div>'
+      +'<div style="font-size:10px;color:var(--mu);font-weight:600;margin-top:2px">리뷰</div>'
+    +'</div>'
+  +'</div>';
+
+  // ── 탭 ──
+  h+='<div style="display:flex;border-bottom:1px solid var(--bdL)">'
+    +'<button onclick="myTab=\'bookmark\';renderMy()" style="flex:1;padding:12px 0;font-size:13px;font-weight:'+(myTab==="bookmark"?"700":"500")+';color:'+(myTab==="bookmark"?"var(--tx)":"var(--mu)")+';background:none;border:none;border-bottom:2.5px solid '+(myTab==="bookmark"?"var(--hot)":"transparent")+';margin-bottom:-1px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px">'
+      +'🔖 저장한 이벤트'
+      +(bm.length?'<span style="background:var(--hot);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">'+bm.length+'</span>':'')
+    +'</button>'
+    +'<button onclick="myTab=\'like\';renderMy()" style="flex:1;padding:12px 0;font-size:13px;font-weight:'+(myTab==="like"?"700":"500")+';color:'+(myTab==="like"?"var(--tx)":"var(--mu)")+';background:none;border:none;border-bottom:2.5px solid '+(myTab==="like"?"var(--hot)":"transparent")+';margin-bottom:-1px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px">'
+      +'❤️ 좋아요'
+      +(lk.length?'<span style="background:var(--hot);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">'+lk.length+'</span>':'')
+    +'</button>'
+  +'</div>';
+
+  // ── 리스트 ──
+  if(!list.length){
+    h+='<div style="text-align:center;padding:60px 20px">'
+      +'<div style="font-size:52px;margin-bottom:16px;opacity:0.35">'+(myTab==="bookmark"?"🔖":"❤️")+'</div>'
+      +'<div style="font-size:15px;font-weight:700;color:var(--sub);margin-bottom:8px">'+(myTab==="bookmark"?"저장한 이벤트가 없어요":"좋아요한 이벤트가 없어요")+'</div>'
+      +'<div style="font-size:13px;color:var(--mu);line-height:1.7">'+(myTab==="bookmark"?"이벤트 상세에서 🔖를 눌러 저장해보세요":"이벤트 상세에서 ❤️를 눌러보세요")+'</div>'
+      +'<button onclick="curNav=\'home\';go(\'home\')" style="margin-top:22px;padding:11px 24px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">이벤트 둘러보기</button>'
+    +'</div>';
+  } else {
+    // ── 랭킹 리스트와 동일한 스타일 ──
+    list.forEach(function(e,i){
+      var sd2=scDetail(e,ev);
+      var t=tc(sd2.total,mx);
+      var c=tC(t);
+      var d=dd(e.ed);
+      // 순위 변동 대신 D-day 표시
+      var dStr=e.st==='upcoming'?'예정':d<=0?'종료':d===0?'오늘':d<=7?'D-'+d:'D-'+d;
+      var dColor=e.st==='upcoming'?'#4fc3f7':d<=0?'#505068':d<=7?'#ff5e3a':'#8d8da0';
+
+      h+='<div style="display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid var(--bdL);cursor:pointer;transition:background 0.12s" onclick="viewEv(\''+e.id+'\')" onmouseenter="this.style.background=\'var(--sf)\'" onmouseleave="this.style.background=\'\'">'
+        // 왼쪽: 순번 + D-day
+        +'<div style="width:36px;text-align:center;flex-shrink:0;margin-right:8px">'
+          +'<div style="font-size:15px;font-weight:800;line-height:1;color:var(--tx)">'+(i+1)+'</div>'
+          +'<div style="margin-top:3px;font-size:9.5px;font-weight:700;color:'+dColor+'">'+dStr+'</div>'
+        +'</div>'
+        // 포스터 썸네일
+        +rkThumb(e)
+        // 정보
+        +'<div style="flex:1;min-width:0;margin-right:10px">'
+          +'<div style="font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;line-height:1.2">'+e.t+'</div>'
+          +'<div style="font-size:11.5px;color:var(--sub);display:flex;flex-direction:column;gap:2px">'
+            +'<div style="display:flex;align-items:center;gap:3px">'+e.ct+' · '+gr(e)+'</div>'
+            +'<div style="font-size:10.5px;color:var(--mu)">'+e.lo+' · '+fmtRange(e.sd,e.ed)+'</div>'
+          +'</div>'
+        +'</div>'
+        // 온도계
+        +thermo(t,e,mx)
+      +'</div>';
+    });
+  }
+
+  document.getElementById("page-my").innerHTML=h+'<div class="credit-block"><div class="credit-row"><a href="https://www.kopis.or.kr" target="_blank" rel="noopener" class="kopis-credit-link"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke-linecap="round" stroke-linejoin="round"/></svg>공연예술통합전산망 KOPIS</a><div class="credit-divider"></div><a href="https://developers.naver.com" target="_blank" rel="noopener" class="naver-credit"><span class="naver-credit-powered">Powered by</span><span class="naver-credit-n">&nbsp;NAVER</span><span class="naver-credit-api">&nbsp;OpenAPI</span></a></div></div>';
+  });
 }
 
 /* ── KOPIS 상세 API 캐시 ── */
@@ -1087,6 +1504,7 @@ function viewEv(id){
 function _buildDetailHTML(id,e,kd){
   var all=ev.map(function(x){return Object.assign({},x,{_s:sc(x)});}).sort(function(a,b){return b._s-a._s;});
   var mx=all.length?all[0]._s:1,t=tc(sc(e),mx),c=tC(t),d=dd(e.ed);
+  var sd2=scDetail(e,ev); // 온도 breakdown
   var dt="진행중",dc="#2ecc71";
   if(e.st==="ended"||d<0){dt="종료";dc="#505068";}else if(e.st==="upcoming"){dt="오픈예정";dc="#4fc3f7";}else if(d<=3){dt="D-"+d;dc="#ff5e3a";}else if(d<=7){dt="D-"+d;dc="#ff9500";}
   var ilk=liked.has(id),ibm=bookmarked.has(id),lks=pLinks(e.sr||"");
@@ -1145,12 +1563,72 @@ function _buildDetailHTML(id,e,kd){
   if(runtime)h+='<span class="dot"></span><span>'+runtime+'</span>';
   h+='</div></div>';
 
-  h+='<div class="det-temp"><div class="det-temp-icon" style="background:'+c+'22;color:'+c+'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg></div><div class="det-temp-body"><div class="det-temp-row"><span class="det-temp-label">온도 · #'+(all.findIndex(function(x){return x.id===id;})+1)+'위</span><span class="det-temp-v" style="color:'+c+'">'+t+'°C</span></div><div class="det-temp-bar"><div class="det-temp-fill" style="width:'+t+'%;background:linear-gradient(90deg,'+c+'88,'+c+')"></div></div></div></div>';
-
   h+='<div class="quick-bar"><button class="quick-btn'+(ilk?' active':'')+'\" onclick="likeEv(\''+e.id+'\')"><svg fill="'+(ilk?'currentColor':'none')+'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="qb-label">좋아요</span><span class="qb-count">'+e.lc.toLocaleString()+'</span></button><button class="quick-btn'+(ibm?' active':'')+'\" onclick="toggleBm(\''+e.id+'\')"><svg fill="'+(ibm?'currentColor':'none')+'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="qb-label">'+(ibm?'저장됨':'저장')+'</span><span class="qb-count"> </span></button></div>';
 
   // 공연 정보 카드
   h+='<div class="info-card">';
+  // ── 온도 카드: 요약 + hover 브레이크다운 ──
+  var rank=all.findIndex(function(x){return x.id===id;})+1;
+  var bdRows2=[
+    {l:'예매순위',   v:sd2.s2,max:40,hint:sd2.br>0?sd2.br+'위':'미집계'},
+    {l:'마감 임박',  v:sd2.s3,max:25,hint:sd2.d>=0?'D-'+sd2.d:'종료'},
+    {l:'네이버 검색',v:sd2.s1,max:30,hint:e.naver_score||0},
+    {l:'신규 오픈',  v:sd2.s4,max:10,hint:sd2.s4?'7일 이내':''},
+    {l:'희소성(기간)',v:sd2.s5,max:12,hint:''},
+    {l:'무료입장',   v:sd2.s6,max:8, hint:sd2.s6?'무료':''},
+    {l:'사용자 반응',v:sd2.s7,max:20,hint:'조회/좋아요/저장'},
+  ];
+  var bdHtml2='';
+  bdRows2.forEach(function(r){
+    var p2=r.max?Math.round(r.v/r.max*100):0;
+    bdHtml2+='<div class="bd-row">'
+      +'<span class="bd-label">'+r.l
+      +(r.hint?'<span class="bd-hint">'+r.hint+'</span>':'')
+      +'</span>'
+      +'<span class="bd-val" style="color:'+c+'">'+r.v+'<span>/'+r.max+'</span></span>'
+    +'</div>'
+    +'<div class="bd-bar-wrap"><div class="bd-bar-fill" style="width:'+p2+'%;background:'+c+'"></div></div>';
+  });
+  var barPct=Math.min(Math.round(t/SCORE_MAX*100),100);
+  h+='<div class="info-row det-score-card" style="padding:16px;border-bottom:none">'
+    // ── 요약 헤더 ──
+    +'<div class="info-body" style="width:100%">'
+      // 라벨
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+        +'<div style="font-size:10px;font-weight:700;color:#505068;text-transform:uppercase;letter-spacing:0.07em">컬처온도</div>'
+        +'<div style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:#3a3a52">'
+          +'<svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round"/></svg>'
+          +'hover로 상세보기'
+        +'</div>'
+      +'</div>'
+      // 온도 수치 + 바
+      +'<div style="display:flex;align-items:center;gap:14px">'
+        +'<span style="font-size:30px;font-weight:900;color:'+c+';line-height:1;letter-spacing:-0.03em;flex-shrink:0">'+t+'<span style="font-size:16px;font-weight:700">°C</span></span>'
+        +'<div style="flex:1">'
+          // 전체 바
+          +'<div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.05);overflow:hidden;margin-bottom:6px">'
+            +'<div style="width:'+barPct+'%;height:100%;border-radius:2px;background:linear-gradient(90deg,'+c+'55,'+c+')"></div>'
+          +'</div>'
+          // 메타 정보
+          +'<div style="display:flex;align-items:center;gap:0">'
+            +'<span style="font-size:10px;color:#6e6e88;font-weight:500">전체 <span style="color:#8d8da0;font-weight:700">#'+rank+'위</span></span>'
+            +(sd2.br>0?'<span style="font-size:10px;color:#3a3a52;margin:0 5px">·</span><span style="font-size:10px;color:#6e6e88">예매 <span style="color:#8d8da0;font-weight:700">'+sd2.br+'위</span></span>':'')
+            +'<span style="font-size:10px;color:#3a3a52;margin-left:auto">원점수 <span style="color:#6e6e88;font-weight:700">'+sd2.total+'점</span></span>'
+          +'</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+    // ── hover 브레이크다운 ──
+    +'<div class="det-score-bd">'
+      +'<div style="font-size:9.5px;font-weight:700;color:#3a3a52;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">온도 점수 Breakdown</div>'
+      +bdHtml2
+      +'<div style="height:1px;background:rgba(255,255,255,0.05);margin:10px 0 8px"></div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between">'
+        +'<span style="font-size:11.5px;font-weight:700;color:#ededf0">원점수 합계</span>'
+        +'<span style="font-size:14px;font-weight:900;color:'+c+';letter-spacing:-0.02em">'+sd2.total+'점</span>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
   h+='<div class="info-row"><div class="info-body"><div class="info-l">기간</div><div class="info-v">'+e.sd+' ~ '+e.ed+'</div>'+(d>=0&&e.st==="ongoing"?'<div style="font-size:12px;color:'+(d<=7?'#ff5e3a':'#8d8da0')+';margin-top:3px">'+(d===0?'오늘 마감':d+'일 남음')+'</div>':'')+'</div></div>';
   h+='<div class="info-row"><div class="info-body"><div class="info-l">장소</div><div class="info-v">'+e.lo+'</div>'+(e.ad?'<div style="font-size:12px;color:#8d8da0;margin-top:3px">'+e.ad+'</div>':'')+'</div></div>';
   if(price)h+='<div class="info-row"><div class="info-body"><div class="info-l">가격</div><div class="info-v" style="font-size:13px;line-height:1.5">'+price+'</div></div></div>';
@@ -1160,7 +1638,34 @@ function _buildDetailHTML(id,e,kd){
   if(cast)h+='<div class="info-row"><div class="info-body"><div class="info-l">출연진</div><div class="info-v" style="font-size:13px;line-height:1.5">'+cast+'</div></div></div>';
   h+='</div>';
 
-  if(lks.length){h+='<div class="det-sec"><div class="det-sec-title">바로가기</div><div class="link-grid">'+lks.map(function(l){var m=LM[l.type]||{label:l.type,icon:"🔗",cls:"ic-web"};return'<a href="'+l.url+'" target="_blank" rel="noopener" class="link-btn"><div class="link-icon '+m.cls+'">'+m.icon+'</div><div class="link-label">'+m.label+'</div></a>';}).join('')+'</div></div>';}
+  // 바로가기 링크 — ticket/instagram/shop만 어드민에서, 나머지 자동
+  var allLks=lks.filter(function(l){return l.type==='ticket'||l.type==='instagram'||l.type==='shop';});
+  var hasTicket=allLks.some(function(l){return l.type==='ticket';});
+  // 네이버 검색은 항상 추가
+  allLks.push({type:'naver',url:getNaverSearchLink(e.t)});
+
+  // 네이버 SVG 로고 버튼 렌더러
+  function naverLinkBtn(url){
+    return '<a href="'+url+'" target="_blank" rel="noopener" class="link-btn">'
+      +'<div class="link-icon" style="background:#03c75a;display:flex;align-items:center;justify-content:center">'
+        +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
+          +'<path d="M13.3 12.6L10.4 8H8v8h2.7v-4.6L13.6 16H16V8h-2.7v4.6z" fill="white"/>'
+        +'</svg>'
+      +'</div>'
+      +'<div class="link-label">네이버 검색</div>'
+    +'</a>';
+  }
+
+  if(allLks.length){
+    h+='<div class="det-sec"><div class="det-sec-title">바로가기</div>'
+      +'<div class="link-grid">'
+      +allLks.map(function(l){
+        if(l.type==='naver')return naverLinkBtn(l.url);
+        var m=LM[l.type]||{label:l.type,icon:"🔗",cls:"ic-web"};
+        return'<a href="'+l.url+'" target="_blank" rel="noopener" class="link-btn"><div class="link-icon '+m.cls+'">'+m.icon+'</div><div class="link-label">'+m.label+'</div></a>';
+      }).join('')
+      +'</div></div>';
+  }
 
   // 줄거리 (KOPIS sty 우선, 없으면 ds)
   var descText=synopsis||(e.ds||'');
@@ -1192,20 +1697,40 @@ function _buildDetailHTML(id,e,kd){
   if(rvl.length){h+='<div class="rv-list">'+rvl.slice(0,3).map(function(r){var dots='';for(var i=1;i<=5;i++)dots+='<span style="color:'+(i<=r.rating?'#ffd60a':'#2a2a38')+';font-size:10px">●</span>';return'<div class="rv-item"><div class="rv-item-hdr"><div class="rv-avatar">'+r.avatar+'</div><div><div class="rv-name">'+r.name+'</div><div class="rv-date" style="display:flex;align-items:center;gap:6px"><span>'+r.date+'</span><span style="display:flex;gap:1px">'+dots+'</span></div></div></div><div class="rv-body">'+r.text+'</div></div>';}).join('')+'</div>';}
   h+='</div>';
   if(related.length){h+='<div class="det-sec"><div class="det-sec-title">비슷한 '+e.ct+'</div><div class="related">'+related.map(function(r){var rt=tc(r._s,mx),rc=tC(rt);return'<div class="related-item" onclick="viewEv(\''+r.id+'\')"><div class="related-img" style="'+(getPoster(r)?'background-image:url('+getPoster(r)+');background-size:cover;background-position:center top;font-size:0':'')+'">'+(!getPoster(r)?IC[r.ct]:'')+' <div class="related-temp" style="background:'+tB(rt)+';color:'+rc+'">'+rt+'°</div></div><div class="related-title">'+r.t+'</div><div style="font-size:10.5px;color:#8d8da0;margin-top:2px">'+r.lo+'</div></div>';}).join('')+'</div></div>';}
-  return h+'<div class="kopis-credit">출처: (재)예술경영지원센터 공연예술통합전산망(www.kopis.or.kr)</div>';
+  // 하단 고정 예매 버튼 — ticket URL 있을 때만 표시
+  var ticketLk=allLks.find(function(l){return l.type==='ticket';});
+  if(ticketLk){
+    h+='<div class="booking-bar">'
+      +'<a href="'+ticketLk.url+'" target="_blank" rel="noopener" class="booking-btn-main">'
+        +'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        +'예매하기'
+      +'</a>'
+    +'</div>';
+  }
+
+  return h+'<div class="credit-block"><div class="credit-row"><a href="https://www.kopis.or.kr" target="_blank" rel="noopener" class="kopis-credit-link"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke-linecap="round" stroke-linejoin="round"/></svg>공연예술통합전산망 KOPIS</a><div class="credit-divider"></div><a href="https://developers.naver.com" target="_blank" rel="noopener" class="naver-credit"><span class="naver-credit-powered">Powered by</span><span class="naver-credit-n">&nbsp;NAVER</span><span class="naver-credit-api">&nbsp;OpenAPI</span></a></div></div>';
 }
 
 function renderDetail(id){
-  var e=ev.find(function(x){return x.id===id;});if(!e)return;
+  if(!id)return;
+  var e=ev.find(function(x){return x.id===id;});
+  if(!e){
+    loadEvents(function(data){
+      ev=data;
+      var e2=ev.find(function(x){return x.id===id;});
+      if(!e2){document.getElementById('page-detail').innerHTML='<div class="empty"><div style="font-size:40px;margin-bottom:12px">😕</div><p>이벤트를 찾을 수 없어요</p></div>';return;}
+      var pg=document.getElementById("page-detail");
+      var isKopis=id&&id.match(/^PF/i);
+      if(isKopis){fetchKopisDetail(id,function(kd){if(curPage==='detail')pg.innerHTML=_buildDetailHTML(id,e2,kd);});}
+      else{pg.innerHTML=_buildDetailHTML(id,e2,null);}
+    });
+    return;
+  }
   var pg=document.getElementById("page-detail");
-  // KOPIS id 형태면 상세 API 호출 (PF로 시작하는 경우)
   var isKopis=id&&id.match(/^PF/i);
   if(isKopis){
-    // 스켈레톤 먼저 보여줌
     pg.innerHTML=sklD();
-    fetchKopisDetail(id,function(kd){
-      if(curPage==='detail')pg.innerHTML=_buildDetailHTML(id,e,kd);
-    });
+    fetchKopisDetail(id,function(kd){if(curPage==='detail')pg.innerHTML=_buildDetailHTML(id,e,kd);});
   } else {
     pg.innerHTML=_buildDetailHTML(id,e,null);
   }
@@ -1408,7 +1933,125 @@ function showPoster(url){
   document.getElementById('posterModal').classList.add('on');
   document.body.style.overflow='hidden';
 }
-// data-poster 클릭 이벤트 위임
+// ── 온도 툴팁 — body 직접 하위 단일 div, overflow 문제 완전 해결 ──
+(function(){
+  var tipEl=document.createElement('div');
+  tipEl.id='thermoGlobalTip';
+  tipEl.style.cssText=[
+    'display:none',
+    'position:fixed',
+    'background:rgba(14,14,22,0.96)',
+    'backdrop-filter:blur(20px)',
+    '-webkit-backdrop-filter:blur(20px)',
+    'border:1px solid rgba(255,255,255,0.07)',
+    'border-radius:12px',
+    'padding:12px 14px',
+    'width:216px',
+    'z-index:99999',
+    'box-shadow:0 16px 40px rgba(0,0,0,0.7),0 0 0 0.5px rgba(255,255,255,0.04)',
+    'pointer-events:none',
+    'font-family:-apple-system,BlinkMacSystemFont,\'Malgun Gothic\',sans-serif'
+  ].join(';');
+  document.body.appendChild(tipEl);
+
+  var _leaveTimer=null;
+
+  function buildTipHTML(evId){
+    var evObj=ev&&ev.find(function(x){return String(x.id)===String(evId);});
+    if(!evObj)return null;
+    var sd=scDetail(evObj,ev);
+    var c=tC(tc(sd.total));
+    var rows=[
+      {l:'예매순위',   v:sd.s2,max:40,hint:sd.br>0?sd.br+'위':'미집계'},
+      {l:'마감 임박',  v:sd.s3,max:25,hint:sd.d>=0?'D-'+sd.d:'종료'},
+      {l:'네이버 검색',v:sd.s1,max:30,hint:evObj.naver_score||0},
+      {l:'신규 오픈',  v:sd.s4,max:10,hint:sd.s4?'7일 이내':''},
+      {l:'희소성(기간)',v:sd.s5,max:12,hint:''},
+      {l:'무료입장',   v:sd.s6,max:8, hint:sd.s6?'무료':''},
+      {l:'사용자 반응',v:sd.s7,max:20,hint:'조회/좋아요/저장'},
+    ];
+
+    // 헤더: 온도 수치
+    var html='<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,0.05)">'
+      +'<div style="font-size:9px;font-weight:700;color:#3a3a52;text-transform:uppercase;letter-spacing:0.1em">온도 점수</div>'
+      +'<div style="font-size:18px;font-weight:900;color:'+c+';letter-spacing:-0.03em;line-height:1">'+sd.total+'<span style="font-size:10px;font-weight:600;color:#505068;margin-left:2px">점</span></div>'
+    +'</div>';
+
+    // 항목 리스트
+    rows.forEach(function(r){
+      var p=r.max?Math.round(r.v/r.max*100):0;
+      var active=r.v>0;
+      html+='<div style="margin-bottom:6px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">'
+          +'<span style="font-size:11px;color:'+(active?'#8d8da0':'#3a3a52')+'">'+r.l
+          +(r.hint?'<span style="font-size:9px;color:#3a3a52;margin-left:4px;background:rgba(255,255,255,0.04);padding:1px 4px;border-radius:3px">'+r.hint+'</span>':'')
+          +'</span>'
+          +'<span style="font-size:11.5px;font-weight:800;color:'+(active?c:'#2a2a38')+';letter-spacing:-0.02em">'+r.v
+            +'<span style="font-size:8.5px;font-weight:400;color:#2a2a38">/'+r.max+'</span>'
+          +'</span>'
+        +'</div>'
+        +'<div style="height:2px;border-radius:1px;background:rgba(255,255,255,0.04);overflow:hidden">'
+          +'<div style="width:'+p+'%;height:100%;border-radius:1px;background:'+c+';opacity:'+(active?'0.8':'0.15')+'"></div>'
+        +'</div>'
+      +'</div>';
+    });
+    return html;
+  }
+
+  function showTip(th){
+    var evId=th.getAttribute('data-ev-id');
+    if(!evId)return;
+    var html=buildTipHTML(evId);
+    if(!html)return;
+    tipEl.innerHTML=html;
+    tipEl.style.display='block';
+
+    var rect=th.getBoundingClientRect();
+    var tipW=216,tipH=tipEl.offsetHeight||260;
+    var left=rect.left-tipW-12;
+    if(left<4)left=rect.right+12;
+    if(left+tipW>window.innerWidth-4)left=Math.max(4,rect.left-tipW-12);
+    var top=rect.top+rect.height/2-tipH/2;
+    if(top<8)top=8;
+    if(top+tipH>window.innerHeight-8)top=window.innerHeight-tipH-8;
+    tipEl.style.left=left+'px';
+    tipEl.style.top=top+'px';
+  }
+
+  function hideTip(){
+    tipEl.style.display='none';
+  }
+
+  document.addEventListener('mouseover',function(e){
+    var th=e.target.closest('.thermo');
+    if(th){
+      if(_leaveTimer){clearTimeout(_leaveTimer);_leaveTimer=null;}
+      showTip(th);
+      return;
+    }
+    var card=e.target.closest('.det-score-card');
+    if(card){
+      var bd=card.querySelector('.det-score-bd');
+      if(bd)bd.classList.add('show');
+    }
+  });
+
+  document.addEventListener('mouseout',function(e){
+    var th=e.target.closest('.thermo');
+    if(th&&!th.contains(e.relatedTarget)){
+      _leaveTimer=setTimeout(hideTip,80);
+    }
+    var card=e.target.closest('.det-score-card');
+    if(card&&!card.contains(e.relatedTarget)){
+      var bd=card.querySelector('.det-score-bd');
+      if(bd)bd.classList.remove('show');
+    }
+  });
+})();
+
+
+
+
 document.addEventListener('click', function(ev){
   var el=ev.target.closest('[data-poster]');
   if(el){showPoster(el.getAttribute('data-poster'));}
